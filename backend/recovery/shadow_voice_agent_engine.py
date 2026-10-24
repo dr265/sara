@@ -1960,7 +1960,7 @@ def owner_command(db: Session, request: OwnerCommand) -> Dict[str, Any]:
     if normalized.startswith("call "):
         rest = command[5:].strip()
 
-        # Extract a phone number if present: "call devendra at +919389748900"
+        # Extract a phone number if present: "call Ravi at +919000000000"
         phone_match = re.search(r"(\+?\d[\d\s\-().]{7,}\d)", rest)
         target_phone = ""
         target_name = ""

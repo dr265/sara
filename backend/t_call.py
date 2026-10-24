@@ -6,7 +6,7 @@ from twilio.rest import Client
 import os, time
 c = Client(os.environ["TWILIO_ACCOUNT_SID"], os.environ["TWILIO_AUTH_TOKEN"])
 base = os.environ.get("PUBLIC_BASE_URL","").rstrip("/")
-call = c.calls.create(to="+919389748900", from_=os.environ["TWILIO_PHONE_NUMBER"],
+call = c.calls.create(to="+919000000000", from_=os.environ["TWILIO_PHONE_NUMBER"],
     url=f"{base}/voice-agent/voice/twilio/inbound",
     status_callback=f"{base}/voice-agent/voice/twilio/status-callback")
 print("PLACED:", call.sid, flush=True)

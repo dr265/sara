@@ -104,9 +104,9 @@ SHEET_STATUS_HEADER = "Status"
 # Sender identity appended to every generated email (campaign.signature overrides it).
 DEFAULT_SIGNATURE = (
     "Your sincerely,\n"
-    "Devendra Rajput\n"
-    "Email: dr7409311839@gmail.com\n"
-    "WhatsApp: +91 9389748900"
+    "Sara AI Platform\n"
+    "Email: support@example.com\n"
+    "WhatsApp: +91 90000 00000"
 )
 
 router = APIRouter(prefix="/email-agent", tags=["Email Automation Agent"])

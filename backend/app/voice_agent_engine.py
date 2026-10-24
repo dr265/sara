@@ -172,11 +172,11 @@ def normalize_phone(phone: str, default_region: str | None = None) -> str:
     """Normalise any user-entered number to E.164.
 
     `default_region` used to be hardcoded to "US", which silently mangled
-    Indian numbers: "9389748900" parsed as a valid US area code (938-974-8900)
-    and became "+19389748900" — a real US number that Twilio happily accepted
-    at the API layer and then never connected to the owner. The region now
-    comes from SARA_PHONE_REGION (default "IN"), and a bare national number
-    is validated before any fallback is attempted.
+    Indian numbers: a bare 10-digit mobile was parsed as a valid US number
+    ("+1..."), which Twilio happily accepted at the API layer and then never
+    connected to the owner. The region now comes from SARA_PHONE_REGION
+    (default "IN"), and a bare national number is validated before any
+    fallback is attempted.
     """
     phone = (phone or "").strip()
 
@@ -199,11 +199,10 @@ def normalize_phone(phone: str, default_region: str | None = None) -> str:
         except Exception:
             pass
 
-    # A bare 10-digit number is ambiguous: phonenumbers happily validates
-    # "4155552671" as BOTH +14155552671 (US) and +914155552671 (IN), and
-    # "9389748900" as both +19389748900 (US) and +919389748900 (IN). We
-    # disambiguate by shape instead of by parse order — Indian mobile numbers
-    # are 10 digits starting 6-9, which is never a valid US area code.
+    # A bare 10-digit number is ambiguous: phonenumbers happily validates the
+    # same digits as both a US and an Indian national number. We disambiguate
+    # by shape instead of by parse order — Indian mobile numbers are 10 digits
+    # starting 6-9, which is never a valid US area code.
     if digits and not phone.startswith("+") and len(digits) == 10:
         region = "IN" if digits[0] in "6789" else "US"
         if phonenumbers:
@@ -2124,7 +2123,7 @@ def owner_command(db: Session, request: OwnerCommand) -> Dict[str, Any]:
     if normalized.startswith("call "):
         rest = command[5:].strip()
 
-        # Extract a phone number if present: "call devendra at +919389748900"
+        # Extract a phone number if present: "call Ravi at +919000000000"
         phone_match = re.search(r"(\+?\d[\d\s\-().]{7,}\d)", rest)
         target_phone = ""
         target_name = ""

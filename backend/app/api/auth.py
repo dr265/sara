@@ -65,7 +65,7 @@ async def google_auth_callback(payload: AuthCode, db: Session = Depends(get_db))
 
         if not existing_user:
             try:
-                new_user = User(id=payload.user_id, email=google_email or "dr7409311839@gmail.com")
+                new_user = User(id=payload.user_id, email=google_email or "support@example.com")
                 db.add(new_user)
                 db.commit()
                 target_user_id = payload.user_id
