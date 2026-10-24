@@ -1,111 +1,184 @@
-# SARA-AI-AGENCY
-Sara AI Nexus AGENCY is an autonomous multi-agent AI ecosystem that unifies social media, voice, messaging, documents, Gmail, financial analysis, and desktop automation—turning business intent into coordinated AI actions through one intelligent command center.
+# SARA AI Nexus
 
-## Local development
+**An autonomous multi-agent AI ecosystem that turns business intent into coordinated action.**
 
-From the project root, install the frontend dependencies and start its development server:
+SARA unifies social media, voice calling, messaging, email, documents, research, financial analysis, and desktop automation behind one command center. A single FastAPI orchestration core routes each request to the right agent, with LLM failover across providers, tenant-scoped state, a Next.js hub for operators, and a PyQt6 desktop app for local machine control.
+
+---
+
+## Highlights
+
+- **One backend for every agent** — API, WebSockets, background pollers, and agent orchestration run in a single process.
+- **LLM failover router** — OpenAI-compatible providers are tried in order, so a quota error or outage degrades gracefully instead of breaking the request.
+- **Voice stack** — Twilio telephony with Sarvam and ElevenLabs speech, multilingual detection, inbound booking, and outbound calling.
+- **Omnichannel messaging** — WhatsApp Cloud API and transport providers, Telegram, Gmail/SMTP, and social publishing.
+- **Desktop agent** — a standalone Windows assistant that executes local tools, screen capture, hotkeys, and system actions.
+- **Secure defaults** — secrets live in git-ignored env files, API routes are key-gated, and paired-device tokens are stored hashed.
+
+## Hub modules
+
+| Module | Purpose |
+| --- | --- |
+| Sara Bots | Build and run custom worker bots with skills, schedules, memory, and task runs |
+| Sara Muse | Creative assistant workspace |
+| Sara Sales | Sales outreach and contact workflows |
+| Sara Ultron | Device fleet, remote execution, and system actions |
+| Voice Agent | Inbound booking and outbound calls with multilingual speech |
+| WhatsApp Agent | WhatsApp conversations and channel management |
+| Telegram Assistant | Telegram bot and booking workflows |
+| Email Automation | Campaigns, templates, attachments, and Gmail/SMTP delivery |
+| Social Media | Scheduled posts and social campaigns |
+| Music Studio | Music generation and production tools |
+| Game Forge | Game and project generation |
+| Edulearner AI | Adaptive learning, mentoring, and progress tracking |
+| Trading Agent | Market analysis workflows |
+| AI Web Scraper | Research and structured data extraction |
+| Frontend / Backend Architect | Generate application code from prompts |
+| Sara Auto | Autonomous task automation |
+
+## Architecture
+
+```text
+Browser / operator
+   │  HTTPS + WebSocket
+   ▼
+Next.js hub (:3000) ── server-side proxy ──┐
+                                           ▼
+                           FastAPI unified backend (:8000 local, :8080 Docker)
+                             ├─ agent orchestration + LLM failover router
+                             ├─ voice: Twilio, Sarvam, ElevenLabs
+                             ├─ messaging: WhatsApp, Telegram, Gmail/SMTP
+                             ├─ documents, RAG, research, trading
+                             └─ SQLite (default) or PostgreSQL 16 + pgvector
+                                           ▲
+                                           │  /ultron/* + hub-agent routes
+                                           │  (and direct LLM access)
+                           Windows desktop agent (PyQt6)
+                             └─ local tools, screen, microphone, system control
+```
+
+## Tech stack
+
+| Layer | Stack |
+| --- | --- |
+| Frontend | Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Three.js, MediaPipe, Clerk |
+| Backend | Python 3.13, FastAPI, Uvicorn, SQLAlchemy 2, Pydantic 2, OpenAI-compatible clients |
+| Data | SQLite by default; PostgreSQL 16 with pgvector as an optional profile |
+| Voice and messaging | Twilio, Sarvam, ElevenLabs, WhatsApp Cloud API, Telegram, SMTP/Gmail |
+| Desktop | Python, PyQt6, WebSockets |
+| Infrastructure | Docker Compose, optional Cloudflare Tunnel (`tools/cloudflared.exe`) |
+
+## Repository layout
+
+```text
+backend/          FastAPI app, agents, services, API routers, tests
+frontend/         Next.js hub and workspace UI
+sara_desktop/     Standalone Windows PyQt6 assistant
+landing/          Static landing page
+docs/             Integration and design notes
+tools/            Optional external binaries
+docker-compose.yml
+start_all.bat     Windows launcher for the backend and frontend
+```
+
+## Getting started
+
+### Prerequisites
+
+- Python 3.13
+- Node.js 20+ and npm
+- Docker (optional, for the container stack)
+- Windows (only for `sara_desktop` desktop control)
+
+Provider keys are optional at boot. Features that need Twilio, Sarvam, Gmail, WhatsApp, or an LLM provider become available once the matching keys are configured.
+
+### Local development
+
+Start the backend:
+
+```sh
+python -m venv backend/venv
+source backend/venv/bin/activate      # Windows: backend\venv\Scripts\activate
+pip install -r backend/requirements.txt
+cp .env.example backend/.env          # Windows: copy .env.example backend\.env
+python backend/run_backend.py
+```
+
+Start the frontend in a second terminal:
 
 ```sh
 npm --prefix frontend install
 npm run dev
 ```
 
-Open the local URL printed by the server (normally http://localhost:3000).
-The root `dev` script forwards to `frontend`; you can also run `npm run dev` directly inside that folder.
-To choose another port, use `npm run dev -- --port 3001`.
+- Frontend: http://localhost:3000
+- Backend: http://127.0.0.1:8000
+- Health check: http://127.0.0.1:8000/api/health
 
-This command starts only the frontend. On Windows, use `start_all.bat` to launch both the Python backend and frontend.
+On Windows, `start_all.bat` launches both processes. `start_all.bat stop` stops only the processes listening on the configured backend and frontend ports.
 
-## Backend (unified FastAPI server)
-
-All agents are served by one backend that boots on port 8000 (`SARA_PORT` to override).
-There is no requirements file for the backend yet, so install the verified core set
-(actually imported by the `app.main` import chain) into a local venv:
+### Docker Compose
 
 ```sh
-cd backend
-python -m venv venv
-venv\Scripts\pip install fastapi uvicorn sqlalchemy pydantic-settings python-dotenv httpx requests openai
-venv\Scripts\python run_backend.py
+cp .env.example backend/.env
+cp frontend/.env.docker.example frontend/.env.docker
+docker compose --env-file frontend/.env.docker up -d --build
 ```
 
-Check `http://127.0.0.1:8000/api/health` for boot confirmation. Per-agent health
-endpoints exist under each agent's prefix (for example `/ultron/health`,
-`/api/gameforge/health`, `/api/music/health`, `/agent/health`).
-Configuration lives in `backend/.env` — copy root `.env.example` there and fill
-in the values you need (each entry documents where it is used).
+- Frontend: http://localhost:3000
+- Backend: http://127.0.0.1:8080 (loopback only by default)
+- Optional local PostgreSQL: `docker compose --profile localdb up -d`
 
-## Dynamic Election Campaign Voice Agent
+Point `DATABASE_URL` at a hosted Postgres (for example Neon) to skip the local database profile. The `sara_state` volume stores the paired-device registry and must survive rebuilds, or every deployment unpairs connected devices.
 
-A second, fully configurable voice agent built on the existing Voice Calling
-Agent. It reuses the same Twilio provider, call state machine, webhooks,
-Sarvam STT/TTS/translate stack, 13-language detector and failover LLM router —
-nothing about the telephony pipeline is duplicated.
-
-Configure it in the hub at **Voice Agent → 🗳️ Election Campaign**
-(`/hub/voice-agent#campaign`). Everything on that screen is saved per user:
-representative, organization, campaign, location/ward, position, language,
-voice, greeting, identity disclosure, purpose, introduction, approved
-message, FAQs, busy/decline/hand-off/do-not-call/closing messages, contact
-details, hand-off number and the calling window.
-
-* Backend service: `backend/app/services/voice_campaign.py`
-* Engine wiring, tenant-scoped API and webhook routing:
-  `backend/app/voice_agent_engine.py` (`/voice-agent/voice/campaign/*`)
-* Frontend: `frontend/src/app/hub/voice-agent/election-campaign.tsx`
-
-Placeholders such as `[representative_name]`, `[location]`, `[position]` and
-their Telugu equivalents (`[ప్రతినిధి పేరు]`, `[ప్రాంతం]`, `[పదవి]`) are filled
-from the saved profile, so changing a value changes what the agent says on
-the next call — no source edit is needed.
-
-Calls reuse the existing `voice_calls` table; a campaign call is one whose
-row carries an `agent_profile_id`, and it keeps the profile snapshot it
-started with. Campaign rows are scoped by the existing tenant key, so one
-user's configuration, contacts and calls are invisible to another. Opt-outs
-raised on the call are stored immediately and block later calls.
-
-No new credentials are required — it uses the same `TWILIO_*`, `SARVAM_API_KEY`
-and `LLM_API_KEY` values as the rest of the voice agent.
-
-## docker-compose services
-
-`docker-compose.yml` starts infrastructure only — none of the app servers run in
-containers today:
-
-- `db` — pgvector/pg16 on 5432 (with healthcheck)
-- `redis` — on 6379 (with healthcheck)
-- `n8n` — workflow automation on 5678 (with healthcheck)
-- `ngrok` — tunnel to the host backend on 8000; token comes from root `.env` (`NGROK_AUTHTOKEN`)
-
-## sara_desktop (standalone PyQt6 assistant)
-
-`sara_desktop/` is a separate Windows desktop voice assistant — it does **not**
-talk to the platform backend; it connects to Gemini Live / LLM gateways directly
-using `sara_desktop/config/api_keys.json` (a separate config surface from the
-backend `.env`). That file holds your **real** provider keys and is git-ignored —
-copy the tracked template and fill it in once:
+### Desktop assistant
 
 ```sh
 cp sara_desktop/config/api_keys.example.json sara_desktop/config/api_keys.json
-```
-
-Alternatively export `LLM_API_KEY` / `ANYMODEL_API_KEY` in the environment and
-leave the key fields empty.
-
-```sh
 cd sara_desktop
 pip install -r requirements.txt
 python main.py
 ```
 
-Its optional phone dashboard now defaults to port **8010** (was 8000, which
-collided with the backend); override with `SARA_DESKTOP_DASH_PORT`.
+Fill in `sara_desktop/config/api_keys.json` with your provider keys or export `LLM_API_KEY` and `ANYMODEL_API_KEY`. The assistant uses those keys for direct model access and calls the local backend for Ultron, fleet, and hub-agent actions. The optional phone dashboard listens on port 8010 by default; override it with `SARA_DESKTOP_DASH_PORT`.
 
-## Other
+Desktop control is Windows-only. A Linux container cannot reach the host's mouse, keyboard, screen, or microphone, so `sara_desktop` runs on the PC.
 
-- `tools/cloudflared.exe` — Cloudflare Tunnel client, an alternative public
-  exposure path alongside the compose ngrok service (no script wraps it; run it
-  manually if you prefer it over ngrok).
-- `start_all.bat stop` stops only the processes listening on the configured
-  backend/frontend ports — it no longer kills every node/python process.
+## Configuration
+
+| File | Purpose |
+| --- | --- |
+| `backend/.env` | Backend secrets and provider settings. Copy from the root `.env.example`, which documents where each variable is used. |
+| `frontend/.env.local` or `frontend/.env.docker` | Backend URLs, Clerk keys, and the public API key. |
+| `sara_desktop/config/api_keys.json` | Desktop provider keys. Copy from the tracked example. |
+
+Key settings:
+
+- `SARA_API_KEY` gates most `/api` routes.
+- `SARA_MASTER_KEY` encrypts stored channel credentials. Set it once and keep it stable; changing it makes existing credentials undecryptable.
+- `FULLAI_API_TOKEN` gates the desktop automation agent separately from the web API.
+- `DATABASE_URL` selects SQLite or PostgreSQL.
+
+Never commit real credentials. All env files are git-ignored, and a pre-commit secret scanner runs against the repository.
+
+## Testing
+
+```sh
+cd backend && python -m pytest tests
+cd sara_desktop && python -m pytest tests
+npm --prefix frontend run lint
+npm --prefix frontend run build
+```
+
+Install `pytest` in the active environment if it is not already present.
+
+## Security notes
+
+- Only templates are tracked; every real key stays in a git-ignored env file.
+- Paired-device tokens are stored hashed in the `sara_state` volume.
+- The Docker backend binds to loopback. Put it behind a reverse proxy if it needs to be reachable externally.
+- Rotate provider keys immediately if one is exposed.
+
+## Documentation
+
+- [OpenMuse integration audit and plan](docs/openmuse-integration/00-audit-and-plan.md)
