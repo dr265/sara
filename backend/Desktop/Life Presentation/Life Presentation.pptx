@@ -1,0 +1,261 @@
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_ALIGN
+from pptx.enum.shapes import MSO_SHAPE
+import datetime
+
+# Create presentation
+prs = Presentation()
+
+# --- Slide 1: Title Slide ---
+slide_layout = prs.slide_layouts[0]  # Title Slide
+slide = prs.slides.add_slide(slide_layout)
+title = slide.shapes.title
+subtitle = slide.placeholders[1]
+
+title.text = "Life: Meaning, Stages, Relationships, and Fulfillment"
+subtitle.text = "Presented by: [Your Name]\nToday's Date: 19 September 2026"
+
+# Format title
+title.text_frame.paragraphs[0].font.bold = True
+title.text_frame.paragraphs[0].font.size = Pt(44)
+title.text_frame.paragraphs[0].font.color.rgb = RGBColor(0, 51, 102)  # Dark blue
+
+# Format subtitle
+subtitle.text_frame.paragraphs[0].font.size = Pt(20)
+subtitle.text_frame.paragraphs[0].font.color.rgb = RGBColor(70, 70, 70)
+
+# Add background image (placeholder - replace with actual image path)
+slide.shapes.add_picture("path/to/background_image.jpg", Inches(0), Inches(0), width=prs.slide_width)
+
+# --- Slide 2: Introduction ---
+slide_layout = prs.slide_layouts[1]  # Title and Content
+slide = prs.slides.add_slide(slide_layout)
+title = slide.shapes.title
+content = slide.placeholders[1]
+
+title.text = "Introduction"
+subtitle = slide.shapes.placeholders[1].text_frame.add_paragraph()
+subtitle.text = "Exploring the Essence of Life"
+subtitle.font.bold = True
+subtitle.font.size = Pt(28)
+
+content.text = """
+• Brief overview of meaning, stages of life, relationships, and fulfillment
+• Hook: 'What gives life its purpose?'
+"""
+
+# Format content
+for paragraph in content.text_frame.paragraphs:
+    paragraph.font.size = Pt(20)
+    paragraph.font.color.rgb = RGBColor(51, 51, 51)
+
+# Add bullet icons
+for i, paragraph in enumerate(content.text_frame.paragraphs):
+    if i > 0:  # Skip title/subtitle
+        left = Inches(0.5)
+        top = Inches(1.5 + i * 0.3)
+        icon = slide.shapes.add_shape(MSO_SHAPE.CHEVRON_RIGHT, left, top, width=Inches(0.2))
+        icon.fill.solid()
+        icon.fill.fore_color.rgb = RGBColor(0, 102, 204)  # Blue
+
+# --- Slide 3: The Meaning of Life ---
+slide = prs.slides.add_slide(slide_layout)
+title = slide.shapes.title
+content = slide.placeholders[1]
+
+title.text = "The Meaning of Life"
+subtitle = slide.shapes.placeholders[1].text_frame.add_paragraph()
+subtitle.text = "Philosophical and Scientific Perspectives"
+subtitle.font.bold = True
+subtitle.font.size = Pt(28)
+
+content.text = """
+• Philosophical views:
+  - Existentialism: Life has no inherent meaning; we create it.
+  - Stoicism: Meaning comes from virtue and resilience.
+  - Religion: Purpose is tied to divine will or afterlife.
+
+• Scientific perspectives:
+  - Consciousness as a defining feature of life.
+  - Purpose as a cognitive construct shaping behavior.
+
+• Quote: 'Life is not about finding yourself. Life is about creating yourself.' — George Bernard Shaw
+"""
+
+# Format content
+for paragraph in content.text_frame.paragraphs:
+    paragraph.font.size = Pt(20)
+    paragraph.font.color.rgb = RGBColor(51, 51, 51)
+
+# Add quote slide (separate slide for emphasis)
+quote_slide_layout = prs.slide_layouts[6]  # Blank
+quote_slide = prs.slides.add_slide(quote_slide_layout)
+quote_shape = quote_slide.shapes.add_shape(MSO_SHAPE.CALLOUT, Inches(1), Inches(1), width=Inches(8), height=Inches(3))
+quote_shape.text_frame.text = "Life is not about finding yourself. Life is about creating yourself."
+quote_shape.text_frame.paragraphs[0].font.size = Pt(24)
+quote_shape.text_frame.paragraphs[0].font.bold = True
+quote_shape.text_frame.paragraphs[0].font.color.rgb = RGBColor(0, 51, 102)
+quote_shape.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+
+# --- Slide 4: Stages of Human Life ---
+slide = prs.slides.add_slide(slide_layout)
+title = slide.shapes.title
+content = slide.placeholders[1]
+
+title.text = "Stages of Human Life"
+subtitle = slide.shapes.placeholders[1].text_frame.add_paragraph()
+subtitle.text = "A Journey Through Development"
+subtitle.font.bold = True
+subtitle.font.size = Pt(28)
+
+content.text = """
+• Prenatal: Development begins (conception to birth)
+• Infancy (0-2 years): Sensory and motor development
+• Childhood (3-12 years): Cognitive and social growth
+• Adolescence (13-18 years): Identity formation and independence
+• Young Adulthood (19-40 years): Career, relationships, and personal growth
+• Middle Age (41-65 years): Reflection, mentorship, and legacy
+• Late Adulthood (66+ years): Wisdom, retirement, and preparation for end of life
+• End of Life: Reflection, legacy, and final transitions
+"""
+
+# Add timeline infographic (placeholder - replace with actual image)
+timeline_shape = slide.shapes.add_picture("path/to/timeline_infographic.png", Inches(3), Inches(2), width=Inches(8))
+
+# --- Slide 5: The Importance of Relationships ---
+slide = prs.slides.add_slide(slide_layout)
+title = slide.shapes.title
+content = slide.placeholders[1]
+
+title.text = "The Importance of Relationships"
+subtitle = slide.shapes.placeholders[1].text_frame.add_paragraph()
+subtitle.text = "Bonds That Shape Us"
+subtitle.font.bold = True
+subtitle.font.size = Pt(28)
+
+content.text = """
+• Mental and physical health benefits:
+  - Reduced stress, anxiety, and depression.
+  - Lower risk of cardiovascular disease.
+
+• Emotional resilience:
+  - Strong social support buffers against life’s challenges.
+
+• Cognitive growth:
+  - Relationships stimulate learning and empathy.
+
+• Statistic: 'People with strong social ties have a 50% higher chance of survival.' — Harvard Study
+"""
+
+# Add family/friends image (placeholder)
+relationships_image = slide.shapes.add_picture("path/to/family_image.jpg", Inches(3), Inches(2), width=Inches(8))
+
+# --- Slide 6: How to Live a Fulfilling Life ---
+slide = prs.slides.add_slide(slide_layout)
+title = slide.shapes.title
+content = slide.placeholders[1]
+
+title.text = "How to Live a Fulfilling Life"
+subtitle = slide.shapes.placeholders[1].text_frame.add_paragraph()
+subtitle.text = "Practical Steps to Meaning"
+subtitle.font.bold = True
+subtitle.font.size = Pt(28)
+
+content.text = """
+• Cultivate gratitude: Reflect on daily blessings.
+• Set meaningful goals: Align with values and passions.
+• Prioritize relationships: Invest time in connections.
+• Practice mindfulness: Stay present and reduce stress.
+• Contribute to something greater: Help others or the community.
+"""
+
+# Add quote slide for this section
+quote_shape = slide.shapes.add_shape(MSO_SHAPE.CALLOUT, Inches(1), Inches(4), width=Inches(8), height=Inches(2))
+quote_shape.text_frame.text = "Life is about making an impact, not making an income." — Kevin Kruse
+quote_shape.text_frame.paragraphs[0].font.size = Pt(20)
+quote_shape.text_frame.paragraphs[0].font.color.rgb = RGBColor(0, 51, 102)
+quote_shape.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+
+# --- Slide 7: Common Pitfalls ---
+slide = prs.slides.add_slide(slide_layout)
+title = slide.shapes.title
+content = slide.placeholders[1]
+
+title.text = "Common Pitfalls"
+subtitle = slide.shapes.placeholders[1].text_frame.add_paragraph()
+subtitle.text = "Avoiding the Traps"
+subtitle.font.bold = True
+subtitle.font.size = Pt(28)
+
+content.text = """
+• Chasing materialism: Wealth ≠ happiness (e.g., luxury without purpose).
+• Neglecting relationships: Isolation leads to loneliness and poor health.
+• Ignoring self-care: Burnout reduces quality of life.
+• Comparison with others: Leads to dissatisfaction and envy.
+"""
+
+# Add warning quote
+warning_shape = slide.shapes.add_shape(MSO_SHAPE.CALLOUT, Inches(1), Inches(3), width=Inches(8), height=Inches(1.5))
+warning_shape.text_frame.text = "Comparison is the thief of joy." — Theodore Roosevelt
+warning_shape.text_frame.paragraphs[0].font.size = Pt(22)
+warning_shape.text_frame.paragraphs[0].font.bold = True
+warning_shape.text_frame.paragraphs[0].font.color.rgb = RGBColor(153, 0, 0)  # Red
+warning_shape.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+
+# --- Slide 8: Conclusion ---
+slide = prs.slides.add_slide(slide_layout)
+title = slide.shapes.title
+content = slide.placeholders[1]
+
+title.text = "Conclusion"
+subtitle = slide.shapes.placeholders[1].text_frame.add_paragraph()
+subtitle.text = "Reflecting on the Journey"
+subtitle.font.bold = True
+subtitle.font.size = Pt(28)
+
+content.text = """
+• Recap:
+  - Life’s meaning is personal and evolving.
+  - Stages offer growth and reflection.
+  - Relationships are vital for well-being.
+  - Fulfillment comes from intentional living.
+
+• Call to action: 'What will you do today to create a more meaningful life?'
+"""
+
+# Add closing quote
+quote_shape = slide.shapes.add_shape(MSO_SHAPE.CALLOUT, Inches(1), Inches(3), width=Inches(8), height=Inches(2))
+quote_shape.text_frame.text = "The meaning of life is to find your gift. The purpose of life is to give it away." — Pablo Picasso
+quote_shape.text_frame.paragraphs[0].font.size = Pt(22)
+quote_shape.text_frame.paragraphs[0].font.color.rgb = RGBColor(0, 51, 102)
+quote_shape.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
+
+# --- Slide 9: References ---
+slide = prs.slides.add_slide(slide_layout)
+title = slide.shapes.title
+content = slide.placeholders[1]
+
+title.text = "References"
+subtitle = slide.shapes.placeholders[1].text_frame.add_paragraph()
+subtitle.text = "Sources and Further Reading"
+subtitle.font.bold = True
+subtitle.font.size = Pt(28)
+
+content.text = """
+• Forbes: 'The Science of Happiness'
+• High Existence: 'Meaning in Life'
+• Basic Knowledge 101: 'Philosophy of Life'
+• Viktor Frankl: *Man’s Search for Meaning*
+• Harvard Study on Social Ties (2020)
+• American Psychological Association: 'Gratitude and Well-being'
+"""
+
+# Format references
+for paragraph in content.text_frame.paragraphs:
+    paragraph.font.size = Pt(18)
+    paragraph.font.color.rgb = RGBColor(51, 51, 51)
+
+# Save presentation
+prs.save("Life_Meaning_Presentation_2026.pptx")

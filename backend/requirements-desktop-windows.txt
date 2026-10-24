@@ -1,0 +1,68 @@
+# SARA desktop-control runtime — WINDOWS ONLY, installs on the USER'S PC.
+#
+# DO NOT INSTALL THIS IN A LINUX CONTAINER. Every entry here is either a
+# Win32 binding or a library that binds to Win32 at import time. Installing
+# them in a Linux image either fails outright or, worse, installs cleanly and
+# then fails at the first call with a Win32 error — which reads exactly like
+# "the desktop agent is broken".
+#
+# Install with:
+#   py -3.13 -m pip install -r backend/requirements-desktop-windows.txt
+#
+# Versions match backend/venv (Python 3.13.7), the environment these were
+# verified in.
+
+# --- Screen capture ----------------------------------------------------------
+mss==10.2.0                        # fast multi-monitor screen capture
+
+# --- Mouse + keyboard --------------------------------------------------------
+pyautogui==0.9.54                 # mouse move/click/drag/scroll, typing, hotkeys
+pygetwindow==0.0.9                 # window minimise/maximise/restore/resize
+pywin32==312                       # win32gui / win32api / win32con
+pywin32-ctypes==0.2.3
+
+# --- UI Automation (real control tree, not blind coordinates) ---------------
+uiautomation==2.0.29               # walks the live Win32/UIA tree: buttons,
+                                   # edits, tabs, list items. This is what makes
+                                   # "click the Play button" resolvable instead
+                                   # of a guessed (x, y).
+comtypes==1.4.16                   # COM bridge for the above + shell/COM objects
+
+# --- Audio -------------------------------------------------------------------
+pycaw==20240210                    # audio mixer — volume control
+SpeechRecognition==3.17.0          # microphone capture (uses PyAudio)
+pyaudio==0.2.14
+sounddevice==0.5.6                 # PortAudio output for TTS playback + loopback
+pyttsx3==2.99                      # offline TTS via the Windows SAPI voices.
+                                   # No Linux backend exists — this is the
+                                   # reason continuous voice is local-only.
+
+# --- System surface probed by full_ai_v3's /capabilities -------------------
+# Each of these maps 1:1 to a capability row the desktop agent advertises.
+# Without them /capabilities reports the feature OFF and the agent silently
+# plans calls that can never run. Verified present in backend/venv.
+pyperclip==1.11.0                  # clipboard read/write
+Send2Trash==2.1.0                 # recycle bin ("delete" that is recoverable)
+bleak==3.0.2                       # BLE device discovery
+plyer==1.4.3                       # native toasts / notifications
+
+# --- Vision ------------------------------------------------------------------
+opencv-python==5.0.0.93             # frame analysis, template matching
+pytesseract==0.3.13                 # OCR wrapper — ALSO requires the tesseract
+                                    # binary installed on the host
+playwright==1.62.0                  # browser automation (chromium)
+
+# --- Transport to the cloud control plane -------------------------------
+# The Local Agent holds an OUTBOUND authenticated WebSocket to the backend
+# (/ultron/link). Outbound-only is deliberate: the PC never needs an inbound
+# port opened, so this works behind NAT and corporate firewalls.
+websocket-client==1.9.0
+
+# --- Install-step helpers (used by sara_desktop/core/installer.py) ----------
+psutil==7.2.2                       # process enumeration / kill
+
+# --- Optional, brightness only ---------------------------------------------
+# screen-brightness-control is NOT in backend/venv (no wheel for some builds),
+# which is why /capabilities reports brightness_lib as a separate probe. Install
+# it only if you want the "set brightness" tool; everything else works without
+# it.  pip install screen-brightness-control

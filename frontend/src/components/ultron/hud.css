@@ -1,0 +1,458 @@
+/* ==========================================================================
+   SARA ULTRON — HUD layer
+   --------------------------------------------------------------------------
+   The futuristic treatment for the command center: chamfered plates, corner
+   brackets, a reticle around the hologram, a scan sweep, and the three new
+   readouts the redesign is for — voice state, agent fleet, task progress and
+   connected devices.
+
+   Rules this file follows:
+
+   * Tokens come from the shared SARA system in src/styles/sara.css. Only the
+     five Ultron accent hues are local, because they are the hologram's own
+     palette (from the supplied sara_ultron.html) and have no SARA equivalent.
+   * Glass is reserved for surfaces that sit over the WebGL render. Flat plates
+     carry data, so a fleet row is never a translucent card.
+   * Every "alive" animation is gated on [data-live="true"], which the page
+     sets from real backend state. A dead panel does not pulse, which is what
+     makes a pulsing panel trustworthy.
+   * prefers-reduced-motion removes the sweeps, pulses and breathing entirely
+     rather than merely slowing them.
+   ========================================================================== */
+
+.hud {
+  /* Local palette: the hologram's own five hues. */
+  --hud-cyan: #00f0ff;
+  --hud-amber: #ffaa00;
+  --hud-rose: #ff2d6f;
+  --hud-jade: #22d3a5;
+  --hud-violet: #a78bfa;
+  --hud-void: #010204;
+}
+
+.hud .hud-plate {
+  position: relative;
+  border: 1px solid rgba(0, 240, 255, 0.18);
+  background:
+    linear-gradient(180deg, rgba(6, 14, 24, 0.9), rgba(2, 6, 12, 0.94));
+  clip-path: polygon(
+    14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px
+  );
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Corner brackets: four L-shaped rules, drawn with gradients so they cost no
+   extra elements. */
+.hud .hud-plate::before,
+.hud .hud-plate::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+  border-color: var(--hud-cyan);
+  opacity: 0.65;
+}
+
+.hud .hud-plate::before {
+  top: 0;
+  left: 0;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+
+.hud .hud-plate::after {
+  right: 0;
+  bottom: 0;
+  border-right: 1px solid;
+  border-bottom: 1px solid;
+}
+
+.hud .hud-plate > .hud-plate__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 14px;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.14);
+  background: rgba(0, 240, 255, 0.04);
+}
+
+.hud .hud-plate__head h2,
+.hud .hud-plate__head h3 {
+  margin: 0;
+  font-family: var(--sara-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #8ce9ff;
+}
+
+.hud .hud-plate__body {
+  padding: 12px 14px;
+}
+
+.hud .hud-tag {
+  font-family: var(--sara-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sara-faint);
+}
+
+/* ── reticle: the ring the hologram sits inside ──────────────────────────── */
+.hud .hud-reticle {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 52%, transparent 58%, rgba(0, 240, 255, 0.07) 100%);
+}
+
+.hud .hud-reticle::before {
+  content: '';
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(0, 240, 255, 0.1);
+  border-radius: 50%;
+}
+
+/* Four tick marks at the compass points, drawn as a repeating conic gradient
+   mask-free overlay: a conic gradient fades out exactly at the four quadrants
+   the ticks occupy. */
+.hud .hud-reticle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(
+    from 0deg,
+    rgba(0, 240, 255, 0.5) 0deg 1.2deg,
+    transparent 1.2deg 89deg,
+    rgba(0, 240, 255, 0.5) 89deg 90.2deg,
+    transparent 90.2deg 179deg,
+    rgba(0, 240, 255, 0.5) 179deg 180.2deg,
+    transparent 180.2deg 269deg,
+    rgba(0, 240, 255, 0.5) 269deg 270.2deg,
+    transparent 270.2deg 360deg
+  );
+  -webkit-mask: radial-gradient(circle at 50% 52%, transparent 46%, #000 47%, #000 49%, transparent 50%);
+  mask: radial-gradient(circle at 50% 52%, transparent 46%, #000 47%, #000 49%, transparent 50%);
+  opacity: 0.55;
+}
+
+/* Scan sweep. Only runs while the core is genuinely busy — the page sets
+   data-live from the real phase, so an idle command center is perfectly
+   still and the sweep therefore means something. */
+.hud .hud-sweep {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.hud .hud-sweep::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 34%;
+  top: -34%;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(0, 240, 255, 0.09) 55%,
+    rgba(0, 240, 255, 0.16) 80%,
+    transparent
+  );
+  opacity: 0;
+}
+
+.hud[data-live='true'] .hud-sweep::before {
+  opacity: 1;
+  animation: hud-scan 3.6s linear infinite;
+}
+
+@keyframes hud-scan {
+  0% { top: -34%; }
+  100% { top: 110%; }
+}
+
+/* Fine grid over the whole stage, one hairline every 48px. */
+.hud .hud-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(rgba(0, 240, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.045) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask: radial-gradient(circle at 50% 50%, #000 30%, transparent 78%);
+  mask: radial-gradient(circle at 50% 50%, #000 30%, transparent 78%);
+}
+
+/* ── voice rail ─────────────────────────────────────────────────────────── */
+.hud .hud-voice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.hud .hud-voice__states {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.hud .hud-voice__state {
+  position: relative;
+  font-family: var(--sara-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  padding: 5px 9px;
+  border: 1px solid rgba(0, 240, 255, 0.12);
+  color: rgba(140, 233, 255, 0.32);
+  background: rgba(0, 240, 255, 0.02);
+  transition: color 200ms var(--sara-ease), border-color 200ms var(--sara-ease),
+    background 200ms var(--sara-ease);
+}
+
+.hud .hud-voice__state--active {
+  color: #06171d;
+  background: var(--state-color, var(--hud-cyan));
+  border-color: var(--state-color, var(--hud-cyan));
+  font-weight: 700;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--state-color, var(--hud-cyan)) 55%, transparent);
+}
+
+.hud .hud-voice__meter {
+  width: 74px;
+  height: 74px;
+  flex: none;
+}
+
+/* The waveform ring: real bars driven by real state. It is not a fake audio
+   visualiser — bar height is a function of the state and of the echo-guard
+   countdown, both of which come from the backend. */
+.hud .hud-voice__bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  height: 100%;
+}
+
+.hud .hud-voice__bar {
+  width: 3px;
+  background: var(--state-color, var(--hud-cyan));
+  box-shadow: 0 0 6px var(--state-color, var(--hud-cyan));
+  transition: height 180ms var(--sara-ease);
+}
+
+/* ── agent strip ────────────────────────────────────────────────────────── */
+.hud .hud-agents {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.hud .hud-agent {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  border: 1px solid rgba(0, 240, 255, 0.12);
+  background: rgba(4, 10, 18, 0.8);
+  text-decoration: none;
+  color: inherit;
+  min-width: 168px;
+  transition: border-color 180ms var(--sara-ease), background 180ms var(--sara-ease);
+}
+
+.hud .hud-agent:hover {
+  border-color: rgba(0, 240, 255, 0.4);
+  background: rgba(0, 240, 255, 0.07);
+}
+
+.hud .hud-agent__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: 0 0 8px currentColor;
+  background: currentColor;
+}
+
+.hud .hud-agent__name {
+  font-size: 11.5px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hud .hud-agent__meta {
+  font-family: var(--sara-font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  color: var(--sara-faint);
+  white-space: nowrap;
+}
+
+.hud .hud-agent--selected {
+  border-color: var(--hud-cyan);
+  background: rgba(0, 240, 255, 0.12);
+}
+
+/* ── task board ─────────────────────────────────────────────────────────── */
+.hud .hud-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.hud .hud-task {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 10px;
+  padding: 9px 11px;
+  border: 1px solid rgba(0, 240, 255, 0.1);
+  background: rgba(3, 8, 15, 0.85);
+}
+
+.hud .hud-task--active {
+  border-color: rgba(0, 240, 255, 0.34);
+}
+
+.hud .hud-task__goal {
+  font-size: 12px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.hud .hud-task__bar {
+  grid-column: 1 / -1;
+  height: 3px;
+  background: rgba(0, 240, 255, 0.12);
+  overflow: hidden;
+}
+
+.hud .hud-task__bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #0088ff, var(--hud-cyan));
+  box-shadow: 0 0 8px var(--hud-cyan);
+  transition: width 400ms var(--sara-ease);
+}
+
+/* ── devices ────────────────────────────────────────────────────────────── */
+.hud .hud-devices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hud .hud-device {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 4px 11px;
+  align-items: center;
+  padding: 9px 11px;
+  border: 1px solid rgba(0, 240, 255, 0.1);
+  background: rgba(3, 8, 15, 0.85);
+}
+
+.hud .hud-device--online {
+  border-color: rgba(34, 211, 165, 0.42);
+  background: rgba(34, 211, 165, 0.05);
+}
+
+.hud .hud-device--revoked {
+  opacity: 0.5;
+}
+
+.hud .hud-device__glyph {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid currentColor;
+  font-size: 13px;
+  font-family: var(--sara-font-mono);
+}
+
+.hud .hud-device__label {
+  font-size: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.hud .hud-device__meta {
+  grid-column: 2 / -1;
+  font-family: var(--sara-font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  color: var(--sara-faint);
+  word-break: break-word;
+}
+
+.hud .hud-pairing {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.hud .hud-qr {
+  width: 168px;
+  height: 168px;
+  flex: none;
+  background: #fff;
+  padding: 6px;
+  border: 1px solid rgba(0, 240, 255, 0.3);
+}
+
+.hud .hud-qr img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  display: block;
+}
+
+.hud .hud-code {
+  font-family: var(--sara-font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--hud-amber);
+  word-break: break-all;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 170, 0, 0.25);
+  padding: 6px 8px;
+  margin: 6px 0 0;
+}
+
+/* ── reduced motion ─────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .hud .hud-sweep::before {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+  .hud .hud-voice__state--active {
+    box-shadow: none;
+  }
+  .hud .hud-task__bar > span {
+    transition: none;
+  }
+}

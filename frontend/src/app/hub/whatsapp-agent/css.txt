@@ -1,0 +1,8 @@
+se client';
+
+import React, { useEffect, useRef, useState, type ReactNode } from "react";
+import { WHATSAPP_API_URL } from "@/lib/api";
+
+/* -------------------------------------------------------------------------- */
+/*  Design tokens + global styles (scoped by the .sara root)                   */
+/* -------------------------------------------------------------------------- */

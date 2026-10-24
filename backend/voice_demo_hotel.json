@@ -1,0 +1,95 @@
+{
+  "hotel": {
+    "name": "Grand Stay Hotel",
+    "timezone": "Asia/Kolkata",
+    "check_in_time": "14:00",
+    "check_out_time": "11:00",
+    "currency": "INR"
+  },
+  "receptionist_number": "+919389748900",
+  "rooms": [
+    {
+      "type": "Standard",
+      "total": 8,
+      "price_per_night": 3500
+    },
+    {
+      "type": "Deluxe",
+      "total": 4,
+      "price_per_night": 5500
+    },
+    {
+      "type": "Suite",
+      "total": 2,
+      "price_per_night": 9000
+    }
+  ],
+  "blocked_dates": [],
+  "bookings": [
+    {
+      "id": "vb_f7c6dc99de",
+      "date": "2026-10-02",
+      "time": "10:00",
+      "guests": 2,
+      "guest_name": "Smoke Test",
+      "service": "room",
+      "phone": "",
+      "notes": "voice agent booking (session live-smoke-1)",
+      "status": "confirmed",
+      "created_at": "2026-09-29T20:30:37.000263+00:00",
+      "source": "voice-agent"
+    },
+    {
+      "id": "vb_352856c265",
+      "date": "2026-10-08",
+      "time": "08:00",
+      "guests": 2,
+      "guest_name": "Ravi",
+      "service": "",
+      "phone": "",
+      "notes": "voice agent booking (session twilio:CAfin3)",
+      "status": "confirmed",
+      "created_at": "2026-09-30T18:01:11.961481+00:00",
+      "source": "voice-agent"
+    },
+    {
+      "id": "vb_d7601fd655",
+      "date": "2026-10-08",
+      "time": "08:00",
+      "guests": 2,
+      "guest_name": "Ravi",
+      "service": "",
+      "phone": "",
+      "notes": "voice agent booking (session twilio:CAdemo1)",
+      "status": "confirmed",
+      "created_at": "2026-09-30T18:03:05.152954+00:00",
+      "source": "voice-agent"
+    },
+    {
+      "id": "vb_7f00b49178",
+      "date": "2026-10-08",
+      "time": "",
+      "guests": 2,
+      "guest_name": "Ravi",
+      "service": "room",
+      "phone": "",
+      "notes": "voice agent booking (session twilio:CAgfix)",
+      "status": "confirmed",
+      "created_at": "2026-09-30T18:12:10.133495+00:00",
+      "source": "voice-agent"
+    },
+    {
+      "id": "vb_50af273893",
+      "date": "2026-10-12",
+      "time": "",
+      "guests": 2,
+      "guest_name": "Ravi",
+      "service": "",
+      "phone": "",
+      "notes": "voice agent booking (session twilio:CAflow1)",
+      "status": "confirmed",
+      "created_at": "2026-09-30T18:46:12.888744+00:00",
+      "source": "voice-agent"
+    }
+  ]
+}

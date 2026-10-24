@@ -1,0 +1,40 @@
+# SARA backend — OPTIONAL heavy dependencies
+#
+# None of these are needed to boot the API. They are imported lazily, inside the
+# function that uses them, so a missing package degrades one feature to an
+# honest "unavailable" instead of killing the server at import time.
+#
+# Install these ONLY on the service that needs them:
+#   pip install -r requirements.txt -r requirements-optional.txt
+#
+# ---------------------------------------------------------------------------
+# ULTRON HOST VOICE  (optional-voice.txt) — for a Render service that should do
+# server-side speech recognition. Costs ~1.5 GB of image and ~2 GB RAM at load.
+#   If you do not install it, /ultron/ready reports the transcriber as
+#   "not loaded" and /ultron/voice/* returns a clean error. That is the correct
+#   behaviour, not a regression.
+#
+# openai-whisper==20250625
+# torch==2.13.0            # CPU build is fine; CUDA wheels are ~2.5 GB
+# PyAudio==0.2.14          # needs libportaudio2 on Debian/Ubuntu — see Dockerfile
+# SpeechRecognition==3.17.0
+# pyttsx3==2.99            # Windows SAPI TTS; has no Linux backend
+#
+# ---------------------------------------------------------------------------
+# LOCAL BROWSER / VISION AUTOMATION  (optional-desktop.txt)
+#
+# These belong to sara_desktop, which runs on the USER'S MACHINE, not on Render.
+# They are listed here only so nobody installs them on the cloud service by
+# mistake: they automate a local desktop and are useless (and a security
+# liability) without a display, a keyboard and a mouse.
+#   playwright==1.62.0      (+ `playwright install chromium`)
+#   opencv-python==5.0.0.93
+#   pytesseract==0.3.13     (+ the tesseract binary)
+#   sounddevice==0.5.6
+#   pywin32==312            ; Windows only
+#
+# ---------------------------------------------------------------------------
+# NOT INSTALLED ON ANY SERVER — by design
+#   pywinauto, uiautomation, pygetwindow, pyautogui, pythoncom
+#     Windows-only desktop control. They belong in sara_desktop/requirements.txt
+#     behind sys_platform markers and must never enter a cloud image.

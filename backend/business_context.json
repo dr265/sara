@@ -1,0 +1,42 @@
+{
+  "hotel": {
+    "name": "Grand Stay Hotel",
+    "check_in_time": "14:00",
+    "check_out_time": "11:00",
+    "currency": "USD",
+    "address": "123 Grand Avenue",
+    "phone": "+1 555 0100"
+  },
+  "rooms": [
+    {
+      "type": "Standard",
+      "max_guests": 2,
+      "price_per_night": 120,
+      "available": 8
+    },
+    {
+      "type": "Deluxe",
+      "max_guests": 3,
+      "price_per_night": 180,
+      "available": 4
+    },
+    {
+      "type": "Suite",
+      "max_guests": 4,
+      "price_per_night": 300,
+      "available": 2
+    }
+  ],
+  "policies": {
+    "cancellation": "Free cancellation up to 48 hours before check-in",
+    "pets": "Not allowed",
+    "breakfast": "Included in all rates",
+    "payment": "Card or cash at check-in; a valid ID is required"
+  },
+  "amenities": [
+    "Free Wi-Fi",
+    "Pool",
+    "Gym",
+    "Airport shuttle (on request)"
+  ]
+}

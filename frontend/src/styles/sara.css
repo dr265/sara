@@ -1,0 +1,418 @@
+/* ==========================================================================
+   SARA AI — shared design tokens + utilities (restored stylesheet)
+   --------------------------------------------------------------------------
+   This file recreates the product design system that the hub / workspace /
+   platform stylesheets compose from (var(--sara-…)) and the sara-* utility
+   classes (sara-btn, sara-status, sara-chip, sara-input, …). It was lost
+   during restructuring; every page that consumed it silently degraded to
+   unstyled surfaces. It is imported ONLY by surfaces that opt in (the Nexus
+   Hub layout today) and never touches the protected home page, which is
+   fully self-styled.
+   ========================================================================== */
+
+:root {
+  /* ── surfaces & inks ──────────────────────────────────────────────── */
+  --sara-void: #04060a;
+  --sara-bg-1: #0a0e15;
+  --sara-bg: #070a10;
+  --sara-bg-2: #0b0f17;
+  --sara-glass: rgba(255, 255, 255, 0.03);
+  --sara-glass-strong: rgba(255, 255, 255, 0.07);
+  --sara-surface: rgba(255, 255, 255, 0.045);
+  --sara-surface-2: rgba(255, 255, 255, 0.07);
+  --sara-surface-3: rgba(255, 255, 255, 0.06);
+  --sara-surface-raised: rgba(13, 18, 26, 0.78);
+  --sara-line: rgba(255, 255, 255, 0.09);
+  --sara-line-strong: rgba(255, 255, 255, 0.16);
+  --sara-line-soft: rgba(255, 255, 255, 0.05);
+
+  /* ── inks ─────────────────────────────────────────────────────────── */
+  --sara-ink: #f0f4f8;
+  --sara-ink-2: #c9d3dd;
+  --sara-muted: #8b99a6;
+  --sara-dim: #617080;
+  --sara-faint: #4a5563;
+
+  /* ── accents (teal/cyan primary, azure + brass secondaries) ───────── */
+  --sara-accent: #2dd4bf;
+  --sara-accent-ink: #04211c;
+  --sara-accent-glow: rgba(45, 212, 191, 0.35);
+  --sara-accent-1: #5eead4;
+  --sara-accent-2: #14b8a6;
+  --sara-accent-3: #0d9488;
+  --sara-accent-deep: #0f766e;
+  --sara-azure: #7dd3fc;
+  --sara-brass: #c9a861;
+
+  /* ── semantic tones ───────────────────────────────────────────────── */
+  --sara-ok: #34d399;
+  --sara-ok-bg: rgba(52, 211, 153, 0.12);
+  --sara-warn: #fbbf24;
+  --sara-warn-bg: rgba(251, 191, 36, 0.12);
+  --sara-err: #f87171;
+  --sara-err-bg: rgba(248, 113, 113, 0.12);
+  --sara-info: #7dd3fc;
+  --sara-info-bg: rgba(125, 211, 252, 0.12);
+  --sara-violet: #a78bfa;
+
+  /* ── typography ───────────────────────────────────────────────────── */
+  --sara-font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sara-font-serif: "Instrument Serif", Georgia, serif;
+  --sara-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ── geometry ─────────────────────────────────────────────────────── */
+  --sara-r-xs: 6px;
+  --sara-r-sm: 8px;
+  --sara-r-md: 12px;
+  --sara-r-lg: 16px;
+  --sara-r-xl: 20px;
+  --sara-r-2xl: 28px;
+  --sara-sh-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --sara-sh-2: 0 12px 32px -12px rgba(0, 0, 0, 0.5);
+  --sara-sh-3: 0 24px 70px -18px rgba(0, 0, 0, 0.55);
+  --sara-sh-4: 0 32px 90px -20px rgba(0, 0, 0, 0.6);
+
+  /* ── motion ───────────────────────────────────────────────────────── */
+  --sara-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sara-ease-spring: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --sara-ease-slow: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   Base element defaults for opt-in surfaces
+   ========================================================================== */
+
+html {
+  --sara-field-gradient:
+    radial-gradient(90% 80% at 84% -6%, rgba(94, 234, 212, 0.075) 0%, transparent 44%),
+    radial-gradient(80% 70% at 6% 2%, rgba(125, 211, 252, 0.055) 0%, transparent 46%),
+    linear-gradient(175deg, var(--sara-bg-1) 0%, var(--sara-bg) 50%, var(--sara-void) 100%);
+}
+
+.sara-field {
+  background: var(--sara-field-gradient);
+}
+
+.sara-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.25;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* ==========================================================================
+   sara-* utility classes
+   ========================================================================== */
+
+/* ── buttons ─────────────────────────────────────────────────────── */
+.sara-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: var(--sara-r-md);
+  border: 1px solid var(--sara-line);
+  background: var(--sara-surface);
+  color: var(--sara-ink-2);
+  transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.2s var(--sara-ease-spring);
+}
+.sara-btn:hover:not(:disabled) {
+  color: var(--sara-ink);
+  border-color: var(--sara-line-strong);
+  background: var(--sara-surface-2);
+  transform: translateY(-1px);
+}
+.sara-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.sara-btn-primary {
+  background: var(--sara-accent);
+  color: var(--sara-accent-ink);
+  border-color: transparent;
+  font-weight: 700;
+}
+.sara-btn-primary:hover:not(:disabled) {
+  background: var(--sara-accent-1);
+  color: var(--sara-accent-ink);
+  border-color: transparent;
+  box-shadow: 0 10px 26px -10px rgba(45, 212, 191, 0.6);
+}
+.sara-btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--sara-muted);
+}
+.sara-btn-ghost:hover:not(:disabled) {
+  background: var(--sara-surface);
+  color: var(--sara-ink);
+  border-color: var(--sara-line);
+}
+.sara-btn-quiet {
+  background: transparent;
+  border-color: var(--sara-line);
+  color: var(--sara-ink-2);
+}
+.sara-btn-danger {
+  background: var(--sara-err-bg);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: var(--sara-err);
+}
+.sara-btn-danger:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: rgba(248, 113, 113, 0.6);
+  color: #fff;
+}
+
+/* ── focus ring ──────────────────────────────────────────────────── */
+.sara-focus-ring:focus-visible {
+  outline: 2px solid rgba(45, 212, 191, 0.7);
+  outline-offset: 2px;
+}
+
+/* ── status pills ────────────────────────────────────────────────── */
+.sara-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--sara-font-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.55rem;
+  border-radius: 9999px;
+  border: 1px solid var(--sara-line);
+  background: var(--sara-surface);
+  color: var(--sara-muted);
+  white-space: nowrap;
+}
+.sara-status-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: currentColor;
+  flex: none;
+}
+.sara-status-ok { color: var(--sara-ok); border-color: rgba(52, 211, 153, 0.32); background: var(--sara-ok-bg); }
+.sara-status-warn { color: var(--sara-warn); border-color: rgba(251, 191, 36, 0.32); background: var(--sara-warn-bg); }
+.sara-status-err { color: var(--sara-err); border-color: rgba(248, 113, 113, 0.32); background: var(--sara-err-bg); }
+.sara-status-info { color: var(--sara-info); border-color: rgba(125, 211, 252, 0.32); background: var(--sara-info-bg); }
+.sara-status-idle { color: var(--sara-dim); border-color: var(--sara-line); background: var(--sara-surface); }
+
+.sara-pulse {
+  animation: sara-pulse-dot 2.4s ease-in-out infinite;
+}
+@keyframes sara-pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* ── chips ───────────────────────────────────────────────────────── */
+.sara-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--sara-r-xs);
+  border: 1px solid var(--sara-line);
+  background: var(--sara-surface);
+  color: var(--sara-ink-2);
+  white-space: nowrap;
+}
+.sara-chip-accent {
+  border-color: rgba(94, 234, 212, 0.32);
+  background: rgba(94, 234, 212, 0.08);
+  color: var(--sara-accent);
+}
+
+/* ── inputs & selects ────────────────────────────────────────────── */
+.sara-input,
+.sara-select,
+.sara-textarea {
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--sara-ink);
+  background: rgba(4, 6, 10, 0.62);
+  border: 1px solid var(--sara-line);
+  border-radius: var(--sara-r-md);
+  padding: 0.55rem 0.85rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  min-width: 0;
+}
+.sara-input::placeholder,
+.sara-textarea::placeholder {
+  color: var(--sara-faint);
+}
+.sara-input:focus,
+.sara-select:focus,
+.sara-textarea:focus {
+  border-color: rgba(94, 234, 212, 0.5);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
+  background: rgba(4, 6, 10, 0.82);
+}
+
+/* ── surfaces ────────────────────────────────────────────────────── */
+.sara-surface-raised {
+  background: var(--sara-surface-raised);
+  border: 1px solid var(--sara-line);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
+  backdrop-filter: blur(18px) saturate(120%);
+  box-shadow: var(--sara-sh-2);
+}
+
+.sara-ring {
+  box-shadow: var(--sara-sh-2), inset 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.sara-surface {
+  background: var(--sara-glass);
+  border: 1px solid var(--sara-line);
+  -webkit-backdrop-filter: blur(22px) saturate(120%);
+  backdrop-filter: blur(22px) saturate(120%);
+  box-shadow: var(--sara-sh-3), inset 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Hub navigation focus ring (original hub chrome) */
+.hub-focus-ring:focus-visible {
+  outline: 2px solid #b8d7ee;
+  outline-offset: 3px;
+}
+
+/* ── scroll / motion helpers ─────────────────────────────────────── */
+.sara-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+.sara-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.sara-scroll::-webkit-scrollbar-track { background: transparent; }
+.sara-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 9999px;
+}
+.sara-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.24); }
+
+.sara-rise {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: sara-rise-in 0.65s var(--sara-ease) forwards;
+}
+@keyframes sara-rise-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sara-fade-in {
+  animation: sara-fade 0.5s var(--sara-ease) both;
+}
+@keyframes sara-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── typing dots ─────────────────────────────────────────────────── */
+.sara-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.sara-dots > span {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: var(--sara-accent);
+  animation: sara-dot-bounce 1.1s ease-in-out infinite;
+}
+.sara-dots > span:nth-child(2) { animation-delay: 0.15s; }
+.sara-dots > span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes sara-dot-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.55; }
+  40% { transform: translateY(-4px); opacity: 1; }
+}
+
+/* ── meter ───────────────────────────────────────────────────────── */
+.sara-meter {
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.sara-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--sara-accent-1), var(--sara-accent-2));
+  transition: width 0.6s var(--sara-ease);
+}
+
+/* ── reveal (IntersectionObserver-driven) ────────────────────────── */
+.sara-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s var(--sara-ease-slow), transform 0.7s var(--sara-ease-slow);
+}
+.sara-reveal.sara-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── display type helper ─────────────────────────────────────────── */
+.sara-display {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* ── shell helper ────────────────────────────────────────────────── */
+.sara-shell {
+  max-width: 82rem;
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 3.4vw, 3rem);
+}
+
+/* ── eyebrow kicker ──────────────────────────────────────────────── */
+.sara-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--sara-font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--sara-muted);
+}
+.sara-eyebrow::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  flex: none;
+  background: var(--sara-accent);
+  box-shadow: 0 0 10px var(--sara-accent-glow);
+}
+
+/* ==========================================================================
+   Reduced motion: collapse all SARA animations/transitions
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .sara-rise,
+  .sara-fade-in,
+  .sara-pulse,
+  .sara-dots > span,
+  .sara-reveal {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

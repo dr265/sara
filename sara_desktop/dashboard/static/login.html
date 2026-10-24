@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000d14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>SARA · Remote Access</title>
+<style>
+  :root{
+    --bg:#000d14; --panel:#010d14; --border:#0d3347; --border-b:#1a5c7a;
+    --pri:#00d4ff; --pri-dim:#007a99; --pri-gho:#001f2e;
+    --text:#8ffcff; --dim:#3a8a9a; --med:#5ab8cc; --white:#d8f8ff; --red:#ff3355;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--white);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    display:flex; align-items:center; justify-content:center;
+    padding:24px; background-image:radial-gradient(1200px 600px at 50% -10%, #03202e 0%, #000d14 55%);
+  }
+  .card{
+    width:100%; max-width:360px; background:var(--panel);
+    border:1px solid var(--border-b); border-radius:14px;
+    padding:28px 22px; text-align:center;
+    box-shadow:0 0 60px rgba(0,212,255,.06);
+  }
+  .logo{
+    font-family:"Courier New",monospace; font-size:26px; font-weight:700;
+    color:var(--pri); letter-spacing:3px; text-shadow:0 0 18px rgba(0,212,255,.45);
+  }
+  .sub{
+    font-family:"Courier New",monospace; font-size:10px; letter-spacing:4px;
+    color:var(--dim); margin-top:6px; margin-bottom:22px;
+  }
+  .hint{color:var(--med); font-size:13px; line-height:1.5; margin:0 0 18px;}
+  input{
+    width:100%; padding:14px 10px; text-align:center;
+    font-family:"Courier New",monospace; font-size:26px; font-weight:700;
+    letter-spacing:12px; text-indent:12px;
+    color:var(--pri); background:#010f18; border:1px solid var(--border-b);
+    border-radius:9px; outline:none; text-transform:uppercase;
+  }
+  input:focus{border-color:var(--pri); box-shadow:0 0 0 3px rgba(0,212,255,.12);}
+  button{
+    width:100%; margin-top:14px; padding:14px; border-radius:9px;
+    font-family:"Courier New",monospace; font-size:14px; font-weight:700;
+    letter-spacing:2px; cursor:pointer;
+    color:#00151d; background:var(--pri); border:1px solid var(--pri);
+  }
+  button:active{background:var(--pri-dim); border-color:var(--pri-dim);}
+  button[disabled]{opacity:.5;}
+  .err{color:var(--red); font-size:12px; margin-top:12px; min-height:16px;
+       font-family:"Courier New",monospace;}
+  .foot{margin-top:20px; color:var(--dim); font-size:11px; line-height:1.5;}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">◈ SARA</div>
+    <div class="sub">REMOTE ACCESS</div>
+    <p class="hint">Enter the 6-character key shown in <b>SARA Desktop</b> under <b>Remote Control</b>.</p>
+    <input id="pin" inputmode="text" autocomplete="off" autocapitalize="characters"
+           spellcheck="false" maxlength="6" placeholder="••••••" aria-label="Access key">
+    <button id="go">CONNECT</button>
+    <div class="err" id="err"></div>
+    <div class="foot">Or scan the QR code from the desktop for instant access.</div>
+  </div>
+<script>
+(function () {
+  "use strict";
+  var pin = document.getElementById("pin"),
+      go  = document.getElementById("go"),
+      err = document.getElementById("err");
+
+  // Already signed in this tab → straight to the app.
+  try { if (sessionStorage.getItem("sara_token")) location.replace("/"); } catch (e) {}
+
+  pin.addEventListener("input", function () {
+    pin.value = pin.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+    err.textContent = "";
+  });
+  pin.addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });
+  go.addEventListener("click", submit);
+  setTimeout(function () { pin.focus(); }, 150);
+
+  function submit() {
+    var key = pin.value.trim().toUpperCase();
+    if (key.length !== 6) { err.textContent = "Enter the 6-character key."; return; }
+    go.disabled = true; err.textContent = "";
+    fetch("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin: key })
+    }).then(function (r) { return r.json().catch(function () { return {}; }); })
+      .then(function (j) {
+        if (j && j.ok && j.token) {
+          try {
+            sessionStorage.setItem("sara_token", j.token);
+            sessionStorage.setItem("sara_key", key);
+          } catch (e) {}
+          location.replace("/");
+        } else {
+          err.textContent = (j && j.error) || "Invalid or expired key.";
+          go.disabled = false; pin.select();
+        }
+      })
+      .catch(function () {
+        err.textContent = "Cannot reach SARA. Is the desktop running?";
+        go.disabled = false;
+      });
+  }
+})();
+</script>
+</body>
+</html>

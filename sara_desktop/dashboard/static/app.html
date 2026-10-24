@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000d14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SARA · Remote</title>
+<script src="/static/crypto.js"></script>
+<script>
+  /* Fallback: if the local CryptoJS cache is unavailable, load from CDN once. */
+  if (!window.CryptoJS) {
+    document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"><\/script>');
+  }
+</script>
+<style>
+  :root{
+    --bg:#000d14; --panel:#010d14; --panel2:#010f18; --border:#0d3347; --border-b:#1a5c7a;
+    --pri:#00d4ff; --pri-dim:#007a99; --pri-gho:#001f2e;
+    --text:#8ffcff; --dim:#3a8a9a; --med:#5ab8cc; --white:#d8f8ff;
+    --green:#00ff88; --amber:#ffcc00; --red:#ff3355; --acc:#ff6b00;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--white);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  /* ── header ─────────────────────────────────────────────────────────── */
+  header{
+    flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+    padding:calc(10px + env(safe-area-inset-top)) 14px 10px;
+    background:var(--panel); border-bottom:1px solid var(--border);
+  }
+  .brand{
+    font-family:"Courier New",monospace; font-size:16px; font-weight:700;
+    color:var(--pri); letter-spacing:2px; text-shadow:0 0 14px rgba(0,212,255,.4);
+  }
+  .brand small{color:var(--dim); font-size:10px; letter-spacing:3px; margin-left:6px;}
+  .status{
+    display:flex; align-items:center; gap:7px;
+    font-family:"Courier New",monospace; font-size:11px; letter-spacing:1px;
+    color:var(--med); background:var(--panel2); border:1px solid var(--border);
+    border-radius:20px; padding:5px 12px;
+  }
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--dim);
+       box-shadow:0 0 8px currentColor;}
+  .dot.on{background:var(--green);} .dot.sleep{background:var(--amber);}
+  .dot.off{background:var(--red);}
+  /* ── orb ────────────────────────────────────────────────────────────── */
+  #orbwrap{
+    flex:0 0 auto; display:flex; flex-direction:column; align-items:center;
+    justify-content:flex-end; padding:6px 0 2px;
+    height:clamp(150px, 27vh, 240px);
+  }
+  #orb{width:100%; max-width:360px; height:calc(100% - 18px); display:block; cursor:pointer;}
+  #orbcap{
+    font-family:"Courier New",monospace; font-size:10px; letter-spacing:1.5px;
+    color:var(--med); text-align:center; min-height:15px; padding-top:2px;
+  }
+  #orbcap b{color:var(--amber); font-weight:700;}
+  /* ── log ────────────────────────────────────────────────────────────── */
+  #log{
+    flex:1 1 auto; overflow-y:auto; padding:12px 12px 6px;
+    display:flex; flex-direction:column; gap:8px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .bubble{
+    max-width:86%; padding:9px 13px; border-radius:13px;
+    font-size:15px; line-height:1.45; word-break:break-word;
+    white-space:pre-wrap; position:relative;
+  }
+  .bubble.user{
+    align-self:flex-end; background:var(--pri-gho); color:var(--text);
+    border:1px solid var(--border-b); border-bottom-right-radius:4px;
+  }
+  .bubble.sara{
+    align-self:flex-start; background:var(--panel2); color:var(--white);
+    border:1px solid var(--border); border-bottom-left-radius:4px;
+  }
+  .bubble .who{
+    display:block; font-family:"Courier New",monospace; font-size:9px;
+    letter-spacing:2px; color:var(--dim); margin-bottom:4px;
+  }
+  .bubble.sara .who{color:var(--pri-dim);}
+  .sys{
+    align-self:center; text-align:center; max-width:92%;
+    font-family:"Courier New",monospace; font-size:11px; letter-spacing:.5px;
+    color:var(--dim); padding:2px 8px; white-space:pre-wrap; word-break:break-word;
+  }
+  .sys.good{color:var(--green);}
+  .sys.warn{color:var(--amber);}
+  .action{
+    align-self:flex-start; max-width:92%;
+    font-family:"Courier New",monospace; font-size:11.5px;
+    color:#7fe3ff; background:rgba(0,212,255,.055);
+    border-left:2px solid var(--pri-dim); border-radius:4px;
+    padding:4px 9px; white-space:pre-wrap; word-break:break-word;
+  }
+  /* ── composer ───────────────────────────────────────────────────────── */
+  footer{
+    flex:0 0 auto; background:var(--panel); border-top:1px solid var(--border);
+    padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+  }
+  .row{display:flex; gap:8px; align-items:flex-end;}
+  #msg{
+    flex:1 1 auto; resize:none; max-height:110px; min-height:44px;
+    padding:11px 12px; font-size:16px; line-height:1.35;
+    color:var(--white); background:var(--panel2);
+    border:1px solid var(--border-b); border-radius:11px; outline:none;
+    font-family:inherit;
+  }
+  #msg:focus{border-color:var(--pri);}
+  button{
+    flex:0 0 auto; border-radius:11px; border:1px solid var(--border-b);
+    background:var(--panel2); color:var(--pri); font-family:"Courier New",monospace;
+    font-weight:700; cursor:pointer;
+  }
+  button:active{background:var(--pri-gho);}
+  button:disabled{opacity:.45; cursor:default;}
+  #send{width:52px; height:44px; font-size:19px;}
+  .tools{display:flex; gap:8px; margin-bottom:8px;}
+  .tools button{
+    height:36px; padding:0 13px; font-size:12px; letter-spacing:1px;
+    display:flex; align-items:center; gap:6px;
+  }
+  #mic.live{
+    background:rgba(255,51,85,.12); border-color:var(--red); color:var(--red);
+    animation:pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,51,85,.35);}50%{box-shadow:0 0 0 7px rgba(255,51,85,0);}}
+  .mic-note{font-family:"Courier New",monospace; font-size:9.5px; color:var(--dim);
+            letter-spacing:.5px; padding:2px 2px 0;}
+  .mic-note b{color:var(--amber);}
+</style>
+</head>
+<body>
+  <header>
+    <div class="brand">◈ SARA<small>REMOTE</small></div>
+    <div class="status"><span class="dot off" id="dot"></span><span id="stext">CONNECTING…</span></div>
+  </header>
+
+  <div id="orbwrap">
+    <canvas id="orb" title="Tap to mute / unmute SARA's voice"></canvas>
+    <div id="orbcap">CONNECTING…</div>
+  </div>
+
+  <main id="log" aria-live="polite"></main>
+
+  <footer>
+    <div class="tools">
+      <button id="mic" title="Stream your phone microphone to SARA">🎤 MIC OFF</button>
+      <button id="wake" title="Wake SARA">⏰ WAKE</button>
+      <button id="attach" title="Send a file to SARA">📎 FILE</button>
+      <input type="file" id="file" hidden>
+    </div>
+    <div class="row">
+      <textarea id="msg" rows="1" placeholder="Message SARA…"
+                autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+      <button id="send" title="Send">➤</button>
+    </div>
+    <div class="mic-note" id="micnote"></div>
+  </footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var logEl = $("log"), msgEl = $("msg"), dot = $("dot"), stext = $("stext");
+  var micBtn = $("mic"), wakeBtn = $("wake"), attachBtn = $("attach"), fileEl = $("file");
+  var orbC = $("orb"), orbCtx = orbC.getContext("2d"), orbCap = $("orbcap");
+
+  var token = "", skey = "";
+  try {
+    token = sessionStorage.getItem("sara_token") || "";
+    skey  = sessionStorage.getItem("sara_key")   || "";
+  } catch (e) {}
+
+  var ws = null, wsRetry = 0, wsTimer = null, wsGen = 0, lastPongAt = 0, pingTimer = null;
+  var micWS = null, micOn = false, micCtx = null, micStream = null, micProc = null,
+      micAnalyser = null, micBuf = null;
+  var recentSent = [];   // optimistic bubbles awaiting server echo
+  var assistantState = "";   // "active" | "sleeping" from server
+  var everConnected = false, acceptReplay = false;
+
+  // ── helpers ────────────────────────────────────────────────────────────
+  function fmtSize(n) {
+    if (n == null || isNaN(n)) return "";
+    if (n < 1024) return n + " B";
+    if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+    return (n / 1048576).toFixed(1) + " MB";
+  }
+  function atBottom() { return logEl.scrollTop + logEl.clientHeight >= logEl.scrollHeight - 60; }
+  function scrollDown() { logEl.scrollTop = logEl.scrollHeight; }
+  function addBubble(who, text, ts) {
+    if (!text) return;
+    var stick = atBottom();
+    var b = document.createElement("div");
+    b.className = "bubble " + who;
+    var w = document.createElement("span");
+    w.className = "who";
+    w.textContent = (who === "user" ? "YOU" : "SARA") +
+                    (ts ? " · " + new Date(ts).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}) : "");
+    b.appendChild(w);
+    b.appendChild(document.createTextNode(text));
+    logEl.appendChild(b);
+    trimLog();
+    if (stick) scrollDown();
+  }
+  function addSys(text, cls) {
+    if (!text) return;
+    var stick = atBottom();
+    var d = document.createElement("div");
+    d.className = "sys" + (cls ? " " + cls : "");
+    d.textContent = text;
+    logEl.appendChild(d);
+    trimLog();
+    if (stick) scrollDown();
+  }
+  function addAction(text) {
+    if (!text) return;
+    var stick = atBottom();
+    var d = document.createElement("div");
+    d.className = "action";
+    d.textContent = "◈ " + text;
+    logEl.appendChild(d);
+    trimLog();
+    if (stick) scrollDown();
+  }
+  function addReport(m) {
+    var stick = atBottom();
+    var d = document.createElement("div");
+    d.className = "action report";
+    d.textContent = "▣ " + (m.text || "Task report");
+    logEl.appendChild(d);
+    if (m.image) {
+      var img = document.createElement("img");
+      img.alt = "task screenshot";
+      img.style.cssText = "max-width:100%;border:1px solid #0f4060;" +
+        "border-radius:6px;margin:4px 0;display:block";
+      img.src = m.image + (m.image.indexOf("?") === -1 ? "?" : "&") +
+        "token=" + encodeURIComponent(token);
+      logEl.appendChild(img);
+    }
+    trimLog();
+    if (stick) scrollDown();
+  }
+  function trimLog() {
+    while (logEl.children.length > 400) logEl.removeChild(logEl.firstChild);
+  }
+  function setWS(state, note) {
+    dot.className = "dot " + (state === "on" ? "on" : state === "sleep" ? "sleep" : "off");
+    stext.textContent = note;
+  }
+
+  // ── encryption (AES-256-CBC — must match server _decrypt_cbc) ──────────
+  function encryptText(plain) {
+    try {
+      if (!window.CryptoJS || !skey) return null;
+      var keyWA = CryptoJS.SHA256(CryptoJS.enc.Utf8.parse(skey + "SARA-DASHBOARD-v1"));
+      var iv = CryptoJS.lib.WordArray.random(16);
+      var ct = CryptoJS.AES.encrypt(plain, keyWA, {
+        iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7
+      });
+      return CryptoJS.enc.Base64.stringify(iv.clone().concat(ct.ciphertext));
+    } catch (e) { return null; }
+  }
+
+  // ── voice playback (SARA's speech → this phone) ────────────────────────
+  var playCtx = null, playGain = null, playAnalyser = null, playBuf = null;
+  var nextTime = 0, speakingUntil = 0, voiceOn = true, needGesture = false;
+  var activeSources = [];
+
+  function ensurePlayCtx() {
+    try {
+      if (!playCtx) {
+        var C = window.AudioContext || window.webkitAudioContext;
+        if (!C) return;
+        playCtx = new C();
+        playGain = playCtx.createGain();
+        playAnalyser = playCtx.createAnalyser();
+        playAnalyser.fftSize = 256;
+        playBuf = new Uint8Array(playAnalyser.fftSize);
+        playGain.connect(playAnalyser);
+        playAnalyser.connect(playCtx.destination);
+      }
+      if (playCtx.state === "suspended" && playCtx.resume) {
+        playCtx.resume().then(function () {
+          if (playCtx.state === "running") { needGesture = false; flushPending(); }
+        }).catch(function () {});
+      } else if (playCtx.state === "running") {
+        needGesture = false;
+        flushPending();
+      }
+    } catch (e) {}
+  }
+
+  function b64ToInt16(b64) {
+    var bin = atob(b64), len = bin.length >> 1, out = new Int16Array(len);
+    for (var i = 0; i < len; i++) {
+      var v = (bin.charCodeAt(2 * i + 1) << 8) | bin.charCodeAt(2 * i);
+      out[i] = v >= 0x8000 ? v - 0x10000 : v;
+    }
+    return out;
+  }
+
+  var pendingAudio = [];   // speech buffered until mobile audio unlock
+  function queuePending(f32, rate) {
+    pendingAudio.push({ f32: f32, rate: rate });
+    var total = 0;
+    for (var i = 0; i < pendingAudio.length; i++) total += pendingAudio[i].f32.length;
+    while (pendingAudio.length > 1 && total > 60000) {   // keep ≈ 2.5 s
+      total -= pendingAudio.shift().f32.length;
+    }
+  }
+  function flushPending() {
+    if (!pendingAudio.length || !playCtx || playCtx.state !== "running") return;
+    var q = pendingAudio; pendingAudio = [];
+    for (var i = 0; i < q.length; i++) schedulePCM(q[i].f32, q[i].rate, true);
+  }
+
+  function playAudioChunk(b64, rate) {
+    if (!voiceOn || !b64) return;
+    try {
+      ensurePlayCtx();
+      var pcm = b64ToInt16(b64);
+      if (!pcm.length) return;
+      var f32 = new Float32Array(pcm.length);
+      for (var i = 0; i < pcm.length; i++) f32[i] = pcm[i] / 32768;
+      if (!playCtx || playCtx.state !== "running") {
+        needGesture = true;
+        queuePending(f32, rate || 24000);   // plays the moment the user touches
+        return;
+      }
+      schedulePCM(f32, rate || 24000, false);
+    } catch (e) {}
+  }
+
+  function schedulePCM(f32, rate, bulk) {
+    if (!playCtx || playCtx.state !== "running") return;
+    try {
+      var buf = playCtx.createBuffer(1, f32.length, rate || 24000);
+      buf.copyToChannel(f32, 0);
+      var now = playCtx.currentTime;
+      if (nextTime < now + 0.02) nextTime = now + 0.02;
+      if (!bulk && nextTime - now > 1.5) {   // runaway live backlog — drop it
+        stopPlayback(false);
+        nextTime = playCtx.currentTime + 0.02;
+      }
+      var src = playCtx.createBufferSource();
+      src.buffer = buf;
+      src.connect(playGain);
+      activeSources.push(src);
+      src.onended = function () {
+        var k = activeSources.indexOf(src);
+        if (k >= 0) activeSources.splice(k, 1);
+      };
+      src.start(nextTime);
+      nextTime += buf.duration;
+      speakingUntil = Date.now() + Math.max(180, (nextTime - playCtx.currentTime) * 1000 + 120);
+    } catch (e) {}
+  }
+
+  function stopPlayback(clearState) {
+    try {
+      for (var i = 0; i < activeSources.length; i++) {
+        try { activeSources[i].stop(); } catch (e) {}
+      }
+    } catch (e) {}
+    activeSources = [];
+    if (playCtx) nextTime = playCtx.currentTime;
+    if (clearState !== false) speakingUntil = 0;
+  }
+
+  function toggleVoice() {
+    voiceOn = !voiceOn;
+    if (!voiceOn) { stopPlayback(); pendingAudio = []; }
+    else { ensurePlayCtx(); }
+    try { if (playGain) playGain.gain.value = voiceOn ? 1 : 0; } catch (e) {}
+    addSys(voiceOn ? "SARA voice ON for this phone."
+                   : "SARA voice muted on this phone — tap the orb to unmute.");
+  }
+
+  // ── orb (JARVIS-style: rings, particles, audio-reactive core) ──────────
+  var ORB_DPR = 1, ampDisp = 0, orbiters = [];
+  for (var _o = 0; _o < 22; _o++) {
+    orbiters.push({
+      th: Math.random() * 6.2832,
+      r: 1.05 + Math.random() * 0.65,
+      sp: (0.15 + Math.random() * 0.5) * (Math.random() < 0.5 ? 1 : -1),
+      sq: 0.25 + Math.random() * 0.65,
+      sz: 1.2 + Math.random() * 1.6
+    });
+  }
+
+  function sizeOrb() {
+    var r = orbC.getBoundingClientRect();
+    ORB_DPR = Math.min(window.devicePixelRatio || 1, 2.5);
+    orbC.width  = Math.max(120, Math.floor(r.width  * ORB_DPR));
+    orbC.height = Math.max(100, Math.floor(r.height * ORB_DPR));
+  }
+  window.addEventListener("resize", sizeOrb);
+  window.addEventListener("orientationchange", function () { setTimeout(sizeOrb, 250); });
+
+  function hexA(hex, a) {
+    var r = parseInt(hex.slice(1, 3), 16),
+        g = parseInt(hex.slice(3, 5), 16),
+        b = parseInt(hex.slice(5, 7), 16);
+    return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+  }
+
+  function orbState() {
+    if (!(ws && ws.readyState === 1)) return "offline";
+    if (Date.now() < speakingUntil) return "speaking";
+    if (micOn) return "listening";
+    if (assistantState === "sleeping") return "asleep";
+    return "online";
+  }
+
+  function rmsOf(analyser, buf) {
+    if (!analyser || !buf) return 0;
+    analyser.getByteTimeDomainData(buf);
+    var sum = 0;
+    for (var i = 0; i < buf.length; i++) {
+      var v = (buf[i] - 128) / 128;
+      sum += v * v;
+    }
+    return Math.sqrt(sum / buf.length);
+  }
+
+  var COLS = {
+    offline:  ["#3a8a9a", "#0d3347"],
+    online:   ["#00d4ff", "#007a99"],
+    listening:["#66e7ff", "#00d4ff"],
+    speaking: ["#ffcc00", "#ff6b00"],
+    asleep:   ["#5ab8cc", "#0d3347"]
+  };
+  var CAPS = {
+    offline:  "OFFLINE — RECONNECTING…",
+    online:   "SARA ONLINE",
+    listening:"LISTENING — TALK NOW",
+    speaking: "SARA SPEAKING",
+    asleep:   "SARA ASLEEP — SEND A MESSAGE TO WAKE"
+  };
+
+  var lastCap = "";
+  function frame(now) {
+    // audio-reactive amplitude: playback while speaking, mic while listening,
+    // gentle breathing otherwise
+    var amp = 0;
+    if (Date.now() < speakingUntil) {
+      amp = Math.min(1, rmsOf(playAnalyser, playBuf) * 2.6);
+    } else if (micOn && micAnalyser) {
+      amp = Math.min(1, rmsOf(micAnalyser, micBuf) * 3.2);
+    } else {
+      amp = 0.05 + 0.035 * Math.sin(now / 750);
+    }
+    ampDisp += (amp - ampDisp) * 0.18;
+    drawOrb(now, ampDisp);
+
+    var st = orbState();
+    var cap = CAPS[st] || st;
+    if (!voiceOn) cap += "  ·  VOICE OFF (TAP ORB)";
+    else if (needGesture && st !== "offline") cap += "  ·  TAP ORB FOR SOUND";
+    if (cap !== lastCap) { orbCap.textContent = cap; lastCap = cap; }
+    requestAnimationFrame(frame);
+  }
+
+  function drawOrb(now, amp) {
+    var w = orbC.width / ORB_DPR, h = orbC.height / ORB_DPR;
+    var ctx = orbCtx, t = now / 1000;
+    ctx.setTransform(ORB_DPR, 0, 0, ORB_DPR, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    var cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.30;
+    var st = orbState(), cols = COLS[st] || COLS.online;
+    var c0 = cols[0], c1 = cols[1];
+
+    // outer glow
+    var g = ctx.createRadialGradient(cx, cy, R * 0.1, cx, cy, R * 2.3);
+    g.addColorStop(0, hexA(c0, 0.10 + amp * 0.20));
+    g.addColorStop(1, hexA(c0, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 2.3, 0, 6.2832); ctx.fill();
+
+    // orbiting particles
+    for (var p = 0; p < orbiters.length; p++) {
+      var pt = orbiters[p];
+      pt.th += pt.sp * 0.016 * (1 + amp * 2.4);
+      var rad = R * (pt.r + amp * 0.20);
+      var x = cx + Math.cos(pt.th) * rad;
+      var y = cy + Math.sin(pt.th) * rad * pt.sq;
+      ctx.fillStyle = hexA(p % 3 ? c0 : "#ffffff", 0.35 + amp * 0.4);
+      ctx.beginPath(); ctx.arc(x, y, pt.sz * (1 + amp * 0.7), 0, 6.2832); ctx.fill();
+    }
+
+    // rotating rings
+    var spin   = [t * 0.35, -t * 0.22, t * 0.15, -t * 0.09];
+    var mult   = [1.28, 1.45, 1.62, 1.85];
+    var squash = [0.30, 0.45, 0.62, 0.36];
+    for (var i = 0; i < 4; i++) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(spin[i]);
+      ctx.strokeStyle = hexA(i % 2 ? c1 : c0, 0.22 + amp * 0.3);
+      ctx.lineWidth = i % 2 ? 1 : 1.3;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, R * mult[i], R * mult[i] * squash[i], 0, 0, 6.2832);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // energy core
+    var rCore = R * (0.72 + amp * 0.34);
+    var gg = ctx.createRadialGradient(cx - R * 0.22, cy - R * 0.26, R * 0.08, cx, cy, rCore);
+    gg.addColorStop(0, hexA("#ffffff", 0.9));
+    gg.addColorStop(0.35, hexA(c0, 0.75));
+    gg.addColorStop(1, hexA(c1, 0.10));
+    ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.arc(cx, cy, rCore, 0, 6.2832); ctx.fill();
+
+    // halo
+    ctx.strokeStyle = hexA(c0, 0.30 + amp * 0.35);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(cx, cy, R * (0.95 + amp * 0.18), 0, 6.2832); ctx.stroke();
+  }
+
+  orbC.addEventListener("click", function () { ensurePlayCtx(); toggleVoice(); });
+  orbCap.addEventListener("click", function () { ensurePlayCtx(); toggleVoice(); });
+
+  // ── WebSocket (live channel) ───────────────────────────────────────────
+  function wsUrl() {
+    var proto = location.protocol === "https:" ? "wss" : "ws";
+    return proto + "://" + location.host + "/ws?token=" + encodeURIComponent(token);
+  }
+
+  function connectWS() {
+    if (!token) return;
+    if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;  // already working
+    if (wsTimer) { clearTimeout(wsTimer); wsTimer = null; }
+    var gen = ++wsGen;                 // generation: stale sockets can't interfere
+    var sock;
+    try { sock = new WebSocket(wsUrl()); }
+    catch (e) { scheduleReconnect(); return; }
+    ws = sock;
+
+    sock.onopen = function () {
+      if (gen !== wsGen) { try { sock.close(); } catch (e) {} return; }
+      wsRetry = 0;
+      lastPongAt = Date.now();
+      acceptReplay = !everConnected;   // show history only on the first connect
+      everConnected = true;
+      setWS("on", "ONLINE");
+      if (acceptReplay) addSys("Connected to SARA.", "good");
+      ensurePlayCtx();
+      startPing();
+    };
+    sock.onmessage = function (ev) {
+      if (gen !== wsGen) return;
+      var m = null;
+      try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.type === "pong") { lastPongAt = Date.now(); return; }
+      if (m.replay === true && !acceptReplay) return;  // never duplicate on reconnect
+      handleMsg(m);
+    };
+    sock.onclose = function (ev) {
+      if (gen !== wsGen) return;
+      ws = null;
+      stopPing();
+      if (ev && ev.code === 4001) {
+        sessionStorage.removeItem("sara_token");
+        sessionStorage.removeItem("sara_key");
+        token = ""; skey = "";
+        setWS("off", "AUTH LOST");
+        tryDeviceReconnect();
+        return;
+      }
+      setWS("off", "RECONNECTING…");
+      scheduleReconnect();
+    };
+    sock.onerror = function () { /* onclose handles it */ };
+
+    // If the socket never finishes connecting (half-dead Wi-Fi), cycle it.
+    setTimeout(function () {
+      if (gen !== wsGen) return;
+      if (sock.readyState === 0) { try { sock.close(); } catch (e) {} }
+    }, 12000);
+  }
+
+  function scheduleReconnect() {
+    wsRetry += 1;
+    if (wsTimer) return;                       // exactly one pending retry
+    var delay = Math.min(1500 * wsRetry, 8000);
+    wsTimer = setTimeout(function () { wsTimer = null; connectWS(); }, delay);
+  }
+
+  // Heartbeat: a half-dead (silent) socket is detected and rebuilt.
+  function startPing() {
+    stopPing();
+    pingTimer = setInterval(function () {
+      if (!ws || ws.readyState !== 1) return;
+      if (document.hidden) return;
+      try { ws.send(JSON.stringify({ type: "ping" })); } catch (e) { return; }
+      if (lastPongAt && Date.now() - lastPongAt > 45000) {
+        var dead = ws; ws = null; wsGen++;
+        try { dead.close(); } catch (e) {}
+        stopPing();
+        setWS("off", "RECONNECTING…");
+        scheduleReconnect();
+      }
+    }, 15000);
+  }
+  function stopPing() { if (pingTimer) { clearInterval(pingTimer); pingTimer = null; } }
+
+  // Phones freeze sockets/timers while locked — resync the moment we're back.
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) return;
+    if (playCtx && playCtx.state === "suspended") ensurePlayCtx();
+    if (micCtx && micCtx.state === "suspended") { try { micCtx.resume(); } catch (e) {} }
+    if (!ws || ws.readyState > 1) {
+      wsRetry = 0;
+      if (wsTimer) { clearTimeout(wsTimer); wsTimer = null; }
+      connectWS();
+    } else if (ws.readyState === 1) {
+      lastPongAt = Date.now();
+      try { ws.send(JSON.stringify({ type: "ping" })); } catch (e) {}
+    }
+  });
+
+  // ── server → phone messages ────────────────────────────────────────────
+  function handleMsg(m) {
+    if (!m || typeof m !== "object") return;
+    switch (m.type) {
+      case "log":
+        if (m.speaker === "user") {
+          if (consumeRecent(m.text)) break;
+          addBubble("user", m.text, m.ts);
+        } else {
+          addBubble("sara", m.text, m.ts);
+        }
+        break;
+      case "sys":
+        addSys(m.text || "");
+        break;
+      case "action":
+        addAction(m.text || "");
+        break;
+      case "report":
+        addReport(m);
+        break;
+      case "audio":
+        playAudioChunk(m.data, m.rate || 24000);
+        break;
+      case "audio_stop":
+        stopPlayback();
+        break;
+      case "status":
+        assistantState = m.state || "";
+        if (m.state === "active") setWS("on", "ACTIVE");
+        else if (m.state === "sleeping") setWS("sleep", "ASLEEP — SEND TO WAKE");
+        break;
+      case "file_received":
+        addSys("📎 " + (m.name || "file") + " (" + fmtSize(m.size) + ") received" +
+               (m.saved_to ? "\nSaved to " + m.saved_to : ""), "good");
+        break;
+      case "agentic_mode":
+        addSys("[mode] " + (m.mode || m.kind || ""));
+        break;
+      case "agentic_agents":
+        addSys("[agents] " + (m.counts ? JSON.stringify(m.counts) : "") +
+               (m.reason ? " — " + m.reason : ""));
+        break;
+      case "agentic_agent_state":
+        addSys("[agent] " + (m.agent_id || "") + " → " + (m.state || "") +
+               (m.detail ? " — " + String(m.detail).slice(0, 120) : ""));
+        break;
+      case "agentic_task":
+        addSys("[task] " + (m.phase || "") +
+               (m.task && m.task.title ? " — " + m.task.title : ""));
+        break;
+      default:
+        if (m.text) addSys(String(m.text).slice(0, 400));
+        else if (m.state) addSys(String(m.type) + ": " + String(m.state));
+    }
+  }
+  function consumeRecent(text) {
+    var now = Date.now();
+    recentSent = recentSent.filter(function (r) { return now - r.t < 20000; });
+    for (var i = 0; i < recentSent.length; i++) {
+      if (recentSent[i].text === text) { recentSent.splice(i, 1); return true; }
+    }
+    return false;
+  }
+
+  // ── sending text ───────────────────────────────────────────────────────
+  function sendText() {
+    var text = msgEl.value.replace(/\s+$/, "");
+    if (!text.trim()) return;
+    if (!token) { redirectToLogin(); return; }
+    ensurePlayCtx();
+    msgEl.value = ""; autogrow();
+    addBubble("user", text);
+    recentSent.push({ t: Date.now(), text: text });
+
+    var enc = encryptText(text);
+    if (ws && ws.readyState === 1) {
+      var p = { type: "command" };
+      if (enc) p.enc = enc; else p.text = text;
+      ws.send(JSON.stringify(p));
+    } else {
+      var body = enc ? { enc: enc } : { text: text };
+      fetch("/api/command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify(body)
+      }).then(function (r) { if (r.status === 401) redirectToLogin(); })
+        .catch(function () { addSys("Send failed — no connection.", "warn"); });
+    }
+  }
+  function autogrow() {
+    msgEl.style.height = "auto";
+    msgEl.style.height = Math.min(msgEl.scrollHeight, 110) + "px";
+  }
+  msgEl.addEventListener("input", autogrow);
+  msgEl.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(); }
+  });
+  $("send").addEventListener("click", sendText);
+
+  // ── wake + upload ──────────────────────────────────────────────────────
+  wakeBtn.addEventListener("click", function () {
+    if (!token) return;
+    fetch("/api/wake", { method: "POST", headers: { "Authorization": "Bearer " + token } })
+      .then(function (r) {
+        addSys(r.ok ? "Wake signal sent." : "Wake failed (" + r.status + ").",
+               r.ok ? "good" : "warn");
+      })
+      .catch(function () { addSys("Wake failed — no connection.", "warn"); });
+  });
+
+  attachBtn.addEventListener("click", function () { fileEl.click(); });
+  fileEl.addEventListener("change", function () {
+    var f = fileEl.files && fileEl.files[0];
+    if (!f) return;
+    addSys("Uploading " + f.name + " (" + fmtSize(f.size) + ")…");
+    var fd = new FormData();
+    fd.append("file", f);
+    fetch("/api/upload", {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + token },
+      body: fd
+    }).then(function (r) { return r.json().catch(function () { return {}; })
+        .then(function (j) { return { ok: r.ok, status: r.status, j: j }; }); })
+      .then(function (r) {
+        if (r.ok) addSys("📎 " + (r.j.name || f.name) + " sent to SARA.", "good");
+        else addSys("Upload failed: " + (r.j.error || r.status), "warn");
+      })
+      .catch(function () { addSys("Upload failed — no connection.", "warn"); });
+    fileEl.value = "";
+  });
+
+  // ── phone microphone → 16 kHz 16-bit PCM over /ws/phone-audio ─────────
+  function downsampleTo16k(f32, inRate) {
+    var out, i, s;
+    if (inRate === 16000) {
+      out = new Int16Array(f32.length);
+      for (i = 0; i < f32.length; i++) {
+        s = Math.max(-1, Math.min(1, f32[i]));
+        out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      return out;
+    }
+    var ratio = inRate / 16000;
+    var outLen = Math.max(1, Math.floor(f32.length / ratio));
+    out = new Int16Array(outLen);
+    for (i = 0; i < outLen; i++) {
+      var pos = i * ratio, i0 = Math.floor(pos), i1 = Math.min(i0 + 1, f32.length - 1);
+      var frac = pos - i0;
+      s = f32[i0] * (1 - frac) + f32[i1] * frac;
+      s = Math.max(-1, Math.min(1, s));
+      out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return out;
+  }
+
+  var micRetry = 0, micTimer = null;
+
+  function openMicSocket() {
+    var proto = location.protocol === "https:" ? "wss" : "ws";
+    try {
+      micWS = new WebSocket(proto + "://" + location.host +
+                            "/ws/phone-audio?token=" + encodeURIComponent(token));
+    } catch (e) { micWS = null; scheduleMicReconnect(); return; }
+    micWS.binaryType = "arraybuffer";
+    micWS.onopen = function () {
+      if (micRetry > 0) addSys("Phone microphone reconnected.", "good");
+      micRetry = 0;
+    };
+    micWS.onclose = function () {
+      if (!micOn) return;
+      scheduleMicReconnect();
+    };
+    micWS.onerror = function () {};
+  }
+
+  // The mic socket can silently die on a Wi-Fi hiccup — rebuild it quietly.
+  function scheduleMicReconnect() {
+    micRetry += 1;
+    if (micTimer) return;
+    if (micRetry === 1) addSys("Mic stream lost — reconnecting…", "warn");
+    micTimer = setTimeout(function () {
+      micTimer = null;
+      if (!micOn) return;
+      if (micRetry > 10) {
+        addSys("Mic reconnect gave up — tap MIC to restart.", "warn");
+        stopMic();
+        return;
+      }
+      openMicSocket();
+    }, 1200);
+  }
+
+  function toggleMic() {
+    if (micOn) { stopMic("Microphone off."); return; }
+    if (!token) { redirectToLogin(); return; }
+    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+      addSys("Phone microphone needs HTTPS on this browser. Open the https:// link from the QR code.", "warn");
+      return;
+    }
+    ensurePlayCtx();
+    micBtn.disabled = true;
+    navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    }).then(function (stream) {
+      micStream = stream;
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      micCtx = new Ctx();
+      if (micCtx.state === "suspended" && micCtx.resume) micCtx.resume();
+      var src = micCtx.createMediaStreamSource(stream);
+      micAnalyser = micCtx.createAnalyser();
+      micAnalyser.fftSize = 256;
+      micBuf = new Uint8Array(micAnalyser.fftSize);
+      micProc = micCtx.createScriptProcessor(4096, 1, 1);
+      var inRate = micCtx.sampleRate || 48000;
+
+      openMicSocket();
+
+      micProc.onaudioprocess = function (ev) {
+        if (!micOn || !micWS || micWS.readyState !== 1) return;
+        if (Date.now() < speakingUntil) return;   // don't echo SARA back
+        var pcm = downsampleTo16k(ev.inputBuffer.getChannelData(0), inRate);
+        try { micWS.send(pcm.buffer); } catch (e) {}
+      };
+      var sink = micCtx.createGain();
+      sink.gain.value = 0;
+      src.connect(micAnalyser);
+      micAnalyser.connect(micProc);
+      micProc.connect(sink);
+      sink.connect(micCtx.destination);
+
+      micOn = true;
+      micBtn.classList.add("live");
+      micBtn.innerHTML = "⏹ MIC LIVE";
+      addSys("Phone microphone live — SARA is listening.", "good");
+    }).catch(function (err) {
+      addSys("Microphone blocked: " + (err && err.name ? err.name : "permission denied") +
+             ". Allow mic access and try again.", "warn");
+    }).then(function () { micBtn.disabled = false; });
+  }
+
+  function stopMic(note) {
+    micOn = false;
+    if (micTimer) { clearTimeout(micTimer); micTimer = null; }
+    micRetry = 0;
+    try { if (micWS) micWS.close(); } catch (e) {}
+    micWS = null;
+    try { if (micProc) { micProc.onaudioprocess = null; micProc.disconnect(); } } catch (e) {}
+    micProc = null;
+    micAnalyser = null; micBuf = null;
+    try { if (micCtx) micCtx.close(); } catch (e) {}
+    micCtx = null;
+    try { if (micStream) micStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+    micStream = null;
+    micBtn.classList.remove("live");
+    micBtn.innerHTML = "🎤 MIC OFF";
+    if (note) addSys(note);
+  }
+  micBtn.addEventListener("click", toggleMic);
+
+  // ── device reconnect + boot ────────────────────────────────────────────
+  function redirectToLogin() { location.replace("/login"); }
+
+  function tryDeviceReconnect() {
+    var dev = null;
+    try { dev = localStorage.getItem("sara_device_token"); } catch (e) {}
+    if (!dev) { redirectToLogin(); return; }
+    fetch("/api/device-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ device_token: dev })
+    }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (j && j.ok && j.token) {
+          token = j.token;
+          skey = j.key || skey;
+          try {
+            sessionStorage.setItem("sara_token", token);
+            if (j.key) sessionStorage.setItem("sara_key", skey);
+          } catch (e) {}
+          connectWS();
+        } else { redirectToLogin(); }
+      })
+      .catch(function () { redirectToLogin(); });
+  }
+
+  // First user gesture unlocks audio playback on mobile browsers.
+  ["touchend", "click", "keydown"].forEach(function (ev) {
+    document.addEventListener(ev, function () {
+      ensurePlayCtx();
+      if (playCtx && playCtx.state === "running") needGesture = false;
+    }, { once: false, passive: true });
+  });
+
+  function boot() {
+    sizeOrb();
+    requestAnimationFrame(frame);
+    if (!window.CryptoJS) addSys("Warning: encryption library not loaded — messages will be sent unencrypted.", "warn");
+    var secure = (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1");
+    if (!secure) {
+      $("micnote").innerHTML = "MIC REQUIRES THE <b>https://</b> LINK (open the QR link again and accept the certificate).";
+    }
+    if (!token) {
+      var dev = null;
+      try { dev = localStorage.getItem("sara_device_token"); } catch (e) {}
+      if (dev) { tryDeviceReconnect(); return; }
+      redirectToLogin();
+      return;
+    }
+    connectWS();
+  }
+  boot();
+
+  // Exposed for diagnostics / tests (harmless in production).
+  window.__sara = {
+    sendText: sendText, encryptText: encryptText, downsampleTo16k: downsampleTo16k,
+    stopMic: stopMic, playAudioChunk: playAudioChunk, stopPlayback: stopPlayback,
+    inject: handleMsg, addAction: addAction,
+    ping: function () { try { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: "ping" })); } catch (e) {} },
+    testReconnect: function () { if (ws) { try { ws.close(); } catch (e) {} } },
+    getState: function () { return orbState(); },
+    get token() { return token; },
+    get micOn() { return micOn; },
+    get speaking() { return Date.now() < speakingUntil; },
+    get voiceOn() { return voiceOn; },
+    get lastPong() { return lastPongAt; },
+    get wsState() { return ws ? ws.readyState : -1; },
+    get pending() { return pendingAudio.length; }
+  };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,540 @@
+'use client';
+
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+import { Apple } from "lucide-react";
+
+const AURA_STYLES = `
+  .liquid-glass {
+    background: rgba(255,255,255,0.01);
+    background-blend-mode: luminosity;
+    backdrop-filter: blur(4px);
+    border: none;
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.1);
+    position: relative; overflow: hidden;
+  }
+  .liquid-glass::before {
+    content: ''; position: absolute; inset: 0; border-radius: inherit;
+    padding: 1.4px;
+    background: linear-gradient(180deg,
+      rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 20%,
+      rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%,
+      rgba(255,255,255,0.15) 80%, rgba(255,255,255,0.45) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    pointer-events: none;
+  }
+  @keyframes shiny {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+  .animate-shiny {
+    animation: shiny 6s linear infinite;
+  }
+`;
+
+function AuraBackground() {
+  return (
+    <>
+      <style>{AURA_STYLES}</style>
+      <svg className="hidden">
+        <filter id="c3-noise">
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" />
+          <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.35 0" />
+          <feComposite in2="SourceGraphic" operator="in" result="noise" />
+          <feBlend in="SourceGraphic" in2="noise" mode="multiply" />
+        </filter>
+      </svg>
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <video autoPlay loop muted playsInline
+          className="w-full h-full object-cover pointer-events-none opacity-50"
+          src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260508_064122_c4750c0e-7476-4b44-94a2-a85a65c63bf2.mp4" />
+      </div>
+      <div className="hidden md:block pointer-events-none fixed inset-y-0 left-1/2 -translate-x-[calc(50%+36rem)] w-px bg-white/10 z-[5]" />
+      <div className="hidden md:block pointer-events-none fixed inset-y-0 left-1/2 translate-x-[calc(-50%+36rem)] w-px bg-white/10 z-[5]" />
+    </>
+  );
+}
+
+function AppleButton({ label, onClick, className }: any) {
+  return (
+    <button onClick={onClick} className={`group inline-flex items-center justify-center gap-2 rounded-full bg-white text-black font-medium text-sm px-5 py-3 transition-all hover:bg-white/90 active:scale-[0.98] ${className || ''}`}>
+      <Apple className="w-4 h-4" />
+      {label}
+      <svg className="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+    </button>
+  );
+}
+
+import { SARA_API_URL, saraFetch } from '@/lib/api';
+
+/* ============================================================================
+   Types
+   ========================================================================== */
+
+interface Health {
+  status: string;
+  agent: string;
+  llm: boolean;
+  smtp: boolean;
+  smtp_sender: boolean;
+  smtp_password: boolean;
+  gmail_api: boolean;
+  gmail_connected?: boolean;
+  sheets_service_account: boolean;
+  running_campaigns: string[];
+}
+
+const canSendLive = (health: Health | null, provider: string | undefined) =>
+  provider === 'gmail'
+    ? !!health?.gmail_api && !!health?.gmail_connected
+    : !!health?.smtp;
+
+interface Campaign {
+  id: string;
+  name: string;
+  status: string;
+  context: string;
+  instructions: string;
+  subject: string;
+  tone: string;
+  objective: string;
+  cta: string;
+  signature: string;
+  provider: string;
+  dry_run: boolean;
+  test_email: string | null;
+  max_emails: number;
+  delay_seconds: number;
+  max_retries: number;
+  sheet_id: string | null;
+  sheet_range: string;
+  sent_count: number;
+  failed_count: number;
+  counts: Record<string, number>;
+  live: boolean;
+}
+
+interface ClientRow {
+  id: string;
+  name: string;
+  email: string;
+  company: string;
+  source: string;
+  status: string;
+  attempts: number;
+  error: string;
+  message_id: string;
+  sent_at: string | null;
+}
+
+interface ContextFile {
+  id: string;
+  filename: string;
+  chars: number;
+  created_at: string;
+}
+
+type Toast = { kind: 'ok' | 'err' | 'info'; text: string } | null;
+
+const API = `${SARA_API_URL}/email-agent`;
+
+/* ============================================================================
+   Small UI atoms
+   ========================================================================== */
+
+const STATUS_STYLES: Record<string, string> = {
+  Pending: 'bg-slate-500/10 text-white/80 border-slate-500/30',
+  Sending: 'bg-amber-500/10 text-amber-300 border-amber-500/30 animate-pulse',
+  Sent: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
+  Failed: 'bg-rose-500/10 text-rose-300 border-rose-500/30',
+  Skipped: 'bg-slate-700/20 text-white/60 border-slate-600/30',
+};
+
+function StatusPill({ status }: { status: string }) {
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono border ${STATUS_STYLES[status] ?? STATUS_STYLES.Pending}`}>
+      {status.toUpperCase()}
+    </span>
+  );
+}
+
+function Chip({ label, ok, hint }: { label: string; ok: boolean; hint?: string }) {
+  return (
+    <div
+      className="group relative flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/40 border border-white/10"
+      title={hint}
+    >
+      <span className={`h-2 w-2 rounded-full ${ok ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-rose-500'}`} />
+      <span className="text-[11px] font-mono text-white/80">{label}</span>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-[10px] font-mono uppercase tracking-widest text-white/40 mb-1.5">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+const inputCls =
+  'w-full rounded-xl bg-black/50 border border-white/10 px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-white/20 transition-all';
+
+/* ============================================================================
+   3D canvas wrapper
+   ========================================================================== */
+
+function EmailSceneCanvas() {
+  const mountRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let disposed = false;
+    let api: { dispose(): void } | null = null;
+    (async () => {
+      const { createEmailScene } = await import('@/lib/emailScene');
+      if (disposed || !mountRef.current) return;
+      api = createEmailScene(mountRef.current);
+    })();
+    return () => {
+      disposed = true;
+      api?.dispose();
+    };
+  }, []);
+
+  return <div ref={mountRef} className="absolute inset-0 z-0 pointer-events-auto" />;
+}
+
+/* ============================================================================
+   Main page
+   ========================================================================== */
+
+export default function EmailAutomationPage() {
+  /* ---------------- state ---------------- */
+  const [health, setHealth] = useState<Health | null>(null);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [view, setView] = useState<'dashboard' | 'workspace'>('dashboard');
+  const [workspaceTab, setWorkspaceTab] = useState<'memory' | 'ingestion' | 'queue'>('queue');
+  const [active, setActive] = useState<Campaign | null>(null);
+  const [clients, setClients] = useState<ClientRow[]>([]);
+  const [contextFiles, setContextFiles] = useState<ContextFile[]>([]);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [toast, setToast] = useState<Toast>(null);
+
+  // create form
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({
+    name: 'Q4 Outreach', subject: '', objective: '', cta: '', signature: '',
+    tone: 'professional', provider: 'smtp', test_email: '', delay_seconds: 2,
+  });
+
+  // memory editor
+  const [contextDraft, setContextDraft] = useState('');
+  const [instructionsDraft, setInstructionsDraft] = useState('');
+
+  // sheets
+  const [sheetId, setSheetId] = useState('');
+  const [sheetRange, setSheetRange] = useState('Sheet1!A:Z');
+
+  // preview / test
+  const [preview, setPreview] = useState<{ subject: string; body: string; to: string } | null>(null);
+  const [testEmail, setTestEmail] = useState('');
+  const [busy, setBusy] = useState<string>('');
+
+  const notify = useCallback((kind: 'ok' | 'err' | 'info', text: string) => {
+    setToast({ kind, text });
+    setTimeout(() => setToast(null), 4200);
+  }, []);
+
+  /* ---------------- data loading ---------------- */
+
+  const loadHealth = useCallback(async () => {
+    try {
+      const res = await saraFetch(`${API}/health`);
+      if (res.ok) setHealth(await res.json());
+    } catch { /* backend offline */ }
+  }, []);
+
+  const loadCampaigns = useCallback(async () => {
+    try {
+      const res = await saraFetch(`${API}/campaigns`);
+      if (res.ok) {
+        const data: Campaign[] = await res.json();
+        setCampaigns(data);
+        setActive((prev) => (prev ? data.find((c) => c.id === prev.id) ?? null : data[0] ?? null));
+      }
+    } catch { /* backend offline */ }
+  }, []);
+
+  const loadClients = useCallback(async (campaignId: string, filter: string) => {
+    try {
+      const res = await saraFetch(`${API}/campaigns/${campaignId}/clients${filter ? `?status=${filter}` : ''}`);
+      if (res.ok) setClients(await res.json());
+    } catch { /* backend offline */ }
+  }, []);
+
+  const loadContextFiles = useCallback(async (campaignId: string) => {
+    try {
+      const res = await saraFetch(`${API}/campaigns/${campaignId}/context/files`);
+      if (res.ok) setContextFiles(await res.json());
+    } catch { /* backend offline */ }
+  }, []);
+
+  useEffect(() => {
+    loadHealth();
+    loadCampaigns();
+  }, [loadHealth, loadCampaigns]);
+
+  useEffect(() => {
+    if (!active) return;
+    setContextDraft(active.context || '');
+    setInstructionsDraft(active.instructions || '');
+    setSheetId(active.sheet_id || '');
+    setSheetRange(active.sheet_range || 'Sheet1!A:Z');
+    loadClients(active.id, statusFilter);
+    loadContextFiles(active.id);
+  }, [active?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // poll while a campaign is live
+  useEffect(() => {
+    if (!active?.live) return;
+    const t = setInterval(() => {
+      loadCampaigns();
+      if (active) loadClients(active.id, statusFilter);
+      loadHealth();
+    }, 4000);
+    return () => clearInterval(t);
+  }, [active?.live, active?.id, statusFilter, loadCampaigns, loadClients, loadHealth]);
+
+  /* ---------------- actions ---------------- */
+
+  async function createCampaign(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy('create');
+    try {
+      const res = await saraFetch(`${API}/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name || 'Campaign',
+          subject: form.subject,
+          objective: form.objective,
+          cta: form.cta,
+          signature: form.signature,
+          tone: form.tone,
+          provider: form.provider,
+          test_email: form.test_email || null,
+          delay_seconds: Number(form.delay_seconds) || 2,
+          dry_run: true,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail ?? 'Create failed');
+      const { id } = await res.json();
+      notify('ok', 'Campaign created in safe dry-run mode');
+      setShowCreate(false);
+      await loadCampaigns();
+      const fresh = await saraFetch(`${API}/campaigns/${id}`);
+      if (fresh.ok) setActive(await fresh.json());
+    } catch (err) {
+      notify('err', String(err instanceof Error ? err.message : err));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function saveMemory() {
+    if (!active) return;
+    setBusy('memory');
+    try {
+      await saraFetch(`${API}/campaigns/${active.id}/context`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: contextDraft }),
+      });
+      await saraFetch(`${API}/campaigns/${active.id}/instructions`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: instructionsDraft }),
+      });
+      notify('ok', 'Campaign memory saved');
+      loadCampaigns();
+    } catch (err) {
+      notify('err', String(err));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function uploadClientsFile(file: File) {
+    if (!active) return;
+    setBusy('upload');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await saraFetch(`${API}/campaigns/${active.id}/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail ?? 'Upload failed');
+      if (data.added === 0) {
+        notify('info', data.diagnosis ?? 'No valid emails found in the file');
+      } else {
+        notify('ok', `Imported ${data.added} clients (${data.duplicates} duplicates skipped)`);
+      }
+      loadClients(active.id, statusFilter);
+      loadCampaigns();
+    } catch (err) {
+      notify('err', String(err instanceof Error ? err.message : err));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function uploadContextFile(file: File) {
+    if (!active) return;
+    setBusy('ctx');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await saraFetch(`${API}/campaigns/${active.id}/context/upload`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail ?? 'Upload failed');
+      notify('ok', `Memory file "${data.filename}" stored (${data.chars} chars)`);
+      loadContextFiles(active.id);
+    } catch (err) {
+      notify('err', String(err instanceof Error ? err.message : err));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function connectSheet(e: React.FormEvent) {
+    e.preventDefault();
+    if (!active || !sheetId.trim()) return;
+    setBusy('sheet');
+    try {
+      const res = await saraFetch(`${API}/campaigns/${active.id}/sheet`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spreadsheet_id: sheetId.trim(), range_name: sheetRange || 'Sheet1!A:Z' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail ?? 'Sheet connection failed');
+      notify('ok', `Sheet connected — ${data.added} clients imported, ${data.duplicates} duplicates`);
+      loadClients(active.id, statusFilter);
+      loadCampaigns();
+    } catch (err) {
+      notify('err', String(err instanceof Error ? err.message : err));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function doPreview(client: ClientRow) {
+    if (!active) return;
+    setBusy(`preview-${client.id}`);
+    try {
+      const res = await saraFetch(`${API}/campaigns/${active.id}/preview`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client_id: client.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail ?? 'Preview failed');
+      setPreview(data);
+    } catch (err) {
+      notify('err', String(err instanceof Error ? err.message : err));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function doTestSend() {
+    if (!active) return;
+    setBusy('test');
+    try {
+      const res = await saraFetch(`${API}/campaigns/${active.id}/test-send`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: testEmail || active.test_email || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail ?? 'Test send failed');
+      notify(data.mode === 'dry-run' ? 'info' : 'ok', data.mode === 'dry-run' ? `DRY-RUN — nothing was sent. Preview generated for ${data.to}` : `Test email DELIVERED to ${data.to}`);
+      setPreview({ subject: data.subject ?? 'Test', body: data.body, to: data.to });
+    } catch (err) {
+      notify('err', String(err instanceof Error ? err.message : err));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function goLive() {
+    if (!active) return;
+    // A leftover test redirect is the #1 reason "every email comes to me" —
+    // offer to clear it right at the moment of switching to live.
+    const clearRedirect = !!active.test_email && confirm(
+      `⚠ TEST INBOX REDIRECT is active: ${active.test_email}\n\n` +
+      'OK  = remove it and deliver to each client\'s own email address\n' +
+      'Cancel = keep redirecting every email to the test inbox'
+    );
+    if (active.test_email && !clearRedirect && !confirm(
+      `Switch "${active.name}" to LIVE sending?\n\n` +
+      `⚠ Every email will still be redirected to the test inbox ${active.test_email}\n` +
+      `Provider: ${active.provider === 'gmail' ? 'Gmail API' : 'SMTP'} · Delay: ${active.delay_seconds}s between sends\n\n` +
+      'Continue?'
+    )) return;
+    setBusy('live');
+    try {
+      const res = await saraFetch(`${API}/campaigns/${active.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(clearRedirect ? { dry_run: false, test_email: null } : { dry_run: false }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail ?? 'Could not switch to live');
+      notify('ok', clearRedirect
+        ? 'Campaign is LIVE — test redirect removed, emails go to each client'
+        : 'Campaign is now LIVE — real emails will be delivered');
+      loadCampaigns();
+    } catch (err) {
+      notify('err', String(err instanceof Error ? err.message : err));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function runAction(action: 'start' | 'pause' | 'resume' | 'retry-failed' | 'sheet/sync') {
+    if (!active) return;
+    setBusy(action);
+    try {
+      const res = await saraFetch(`${API}/campaigns/${active.id}/${action}`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail ?? `${action} failed`);
+      notify('ok', data.status ?? 'done');
+      loadCampaigns();
+      loadClients(active.id, statusFilter);
+      loadHealth();
+    } catch (err) {
+      notify('err', String(err instanceof Error ? err.message : err));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function validateNow() {
+    if (!active) return;
+    setBusy('validate');
+    try {
+      const res = await saraFetch(`${API}/campaigns/${active.id}/validate`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail ?? 'Validation failed');
+      notify(data.invalid + data.duplicates === 0 ? 'ok' : 'info',
+        `${data.valid} valid / ${data.invalid} invalid / ${data.duplicates} duplicates`);
+    } catch (err) {
+      notify('err', String(err));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  /* ---------------- derived ---------------- */
+
+  const counts = active?.counts ?? {};
+  const total = useMemo(() => Object.values(counts).reduce((a, b) => a + b, 0), [counts]);
+  const progress = total > 0 ? Math.round(((counts.Sent ?? 0) / total) * 100) : 0;
+

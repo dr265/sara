@@ -1,0 +1,139 @@
+# SARA unified backend — production dependency manifest (CLOUD / Linux container)
+#
+# TARGET: Python 3.13 on Linux (python:3.13-slim). Matched to the versions
+# proven working in backend/venv on this machine (Python 3.13.7).
+#
+# WHY 3.13 AND NOT 3.14 — this is the single change that un-broke GameForge.
+# PyPI publishes no cp314 manylinux wheel for pygame 2.6.1 (or pygame-ce), so a
+# Python 3.14 image cannot install it and GameForge reports "pygame is not
+# installed in the backend venv". Verified present for cp313:
+#   pygame-2.6.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+#
+# SCOPE — this file is the CLOUD manifest: everything that can run inside a
+# Linux container. Windows desktop-control libraries (pyautogui, mss,
+# uiautomation, comtypes, pycaw, pywin32, pyttsx3) are NOT here and MUST NOT
+# be added — they are meaningless on Linux and they install nothing useful.
+# They live in requirements-desktop-windows.txt and run on the user's PC.
+#
+# Every remaining heavy import in backend/app is LAZY (inside the function that
+# needs it), so a missing optional package degrades one feature to an honest
+# "unavailable" instead of killing the process at boot. The bare top-level
+# imports are the ones that MUST be here, and they all are.
+
+# --- Web framework / server ---------------------------------------------------
+fastapi==0.141.1
+starlette==1.7.0                  # direct import in app/agents/frontend_developer;
+                                   # arrives via fastapi anyway, pinned so the
+                                   # manifest matches what actually runs
+uvicorn[standard]==0.52.3          # `standard` pulls uvloop + httptools + websockets
+websockets==15.0.1                 # explicit: 7 WebSocket endpoints depend on it
+
+# --- Settings / config --------------------------------------------------------
+pydantic==2.13.4
+pydantic-settings==2.15.0
+python-dotenv==1.2.3               # run_backend.py loads backend/.env at boot
+
+# --- Database -----------------------------------------------------------------
+SQLAlchemy==2.0.52
+psycopg2-binary==2.9.10            # only used when DATABASE_URL is postgresql
+redis==8.1.0                       # optional: used by the n8n/redis compose path
+
+# --- HTTP clients -------------------------------------------------------------
+httpx==0.28.1
+requests==2.31.0
+urllib3==2.8.0                    # direct import in app/api/scraping_agent
+openai==3.2.0                      # OpenAI-compatible clients for the LLM router
+google-genai==2.19.0               # sara_desktop genai_bridge parity + voice paths
+
+# --- Parsing / data -----------------------------------------------------------
+beautifulsoup4==4.15.0
+lxml==6.1.2
+pandas==3.0.5
+numpy==2.5.2
+
+# --- Security / crypto -------------------------------------------------------
+cryptography==50.0.0               # Fernet for WhatsApp/Telegram channel credentials
+PyJWT==2.13.0
+
+# --- Integrations -------------------------------------------------------------
+twilio==9.11.0                     # voice agent webhooks + Media Streams
+google-api-python-client==2.198.0  # Gmail send/read. Lazy at app/api/voice_agent.py:64
+                                   # and app/agents/email_automation.py:446,816, so
+                                   # the process boots without it — but then EVERY
+                                   # voice command fails with "Agent Execution Failed:
+                                   # No module named 'googleapiclient'". Pure Python,
+                                   # installs on Linux: must be in the cloud image.
+google-auth==2.56.3                # google.oauth2.credentials used by the same paths
+google-auth-oauthlib==1.2.2       # installed-only OAuth helper flow for Gmail consent
+
+# --- Media / misc -------------------------------------------------------------
+python-multipart==0.0.32           # file uploads (email agent, frontend developer)
+Pillow==12.3.0
+segno==1.6.6                       # QR rendering for Ultron device pairing
+watchdog==6.0.0
+psutil==7.2.2                      # process inspection (Ultron observer, monitoring)
+
+# --- Terminal / console output -----------------------------------------------
+rich==15.0.0                       # trading agent TUI. BARE import at
+                                   # app/agents/trading_agent.py:37 — omitting
+                                   # this crashes the boot, not one route.
+
+# --- Document / office formats -----------------------------------------------
+# Found by a static import-graph audit of the whole boot closure (93 modules
+# reachable from run_backend.py), not by trial and error. Two of these are bare
+# top-level imports and will kill the process on startup:
+PyPDF2==3.0.1                     # app/api/business_data.py:3 and
+                                   # app/api/voice_agent.py:6 — BARE imports
+pypdf==6.16.2                      # voice_agent_engine PDF text extraction
+openpyxl==3.1.5                   # voice_agent_engine Excel export
+python-docx==1.2.0                 # Word generation
+pdfplumber==0.11.10                # PDF table/text extraction
+pypdfium2==5.13.0                  # PDF -> image (telegram_agent media path)
+phonenumbers==8.13.54              # E.164 normalisation for Twilio numbers
+
+# --- GameForge (Game validation / runtime env check) -------------------------
+# app/api/gameforge.py:53 wraps these in try/except and sets PYGAME_OK /
+# PYGBAG_OK, so the backend boots either way — but with them missing the UI
+# shows the real error "pygame is not installed in the backend venv" and game
+# validation is permanently off. Both have cp313 manylinux wheels (see header).
+pygame==2.6.1
+pygbag==0.9.3
+
+# --- Misc ---------------------------------------------------------------------
+asgiref==3.12.1                    # WsgiToAsgi path for the Telegram WSGI app
+
+# ---------------------------------------------------------------------------
+# PHASE 12 — DEPENDENCY CLASSIFICATION (why each omission is safe)
+#
+# Cloud-safe, deliberately NOT pinned here (all imported lazily; a missing one
+# degrades a single feature to an honest "unavailable", never a boot failure):
+#
+#   openai-whisper==20250625        Server-side STT. ~1.5 GB with torch. Microphone
+#                                   access is a LOCAL concern — it belongs to the
+#                                   Windows agent, not a headless container.
+#   torch==2.13.0, transformers     Server-side embeddings. ~2.5 GB. Only reached
+#   sentence-transformers==6.0.0    through app/api/chat.py and documents.py, both
+#                                   of which lazy-import inside the request.
+#   weasyprint==69.0                Needs pango/cairo system libraries. Add with
+#                                   `apt-get install libpango-1.0-0 libpangoft2-1.0-0
+#                                   libharfbuzz0b libcairo2` if PDF export is wanted.
+#   pytesseract==0.3.13             The pip package is a wrapper; it needs the
+#                                   tesseract BINARY (`apt-get install tesseract-ocr`).
+#   scipy==1.18.0, scikit-learn     Only used by heavier analytics paths.
+#
+# LOCAL-ONLY — Windows desktop control. CANNOT run in a Linux container by any
+# configuration. These are in requirements-desktop-windows.txt, installed on the
+# user's PC, and driven over the authenticated channel in
+# sara_desktop/ultron_runtime.py. Putting them in this file would be theatre:
+#
+#   mss, pyautogui, pycaw,          screen capture, mouse/keyboard, audio mixer,
+#   uiautomation, comtypes,         Win32 window/UI Automation, COM
+#   pywin32, pygetwindow
+#   SpeechRecognition, pyttsx3      STT via the microphone; pyttsx3 is the Windows
+#                                   SAPI TTS engine and has no Linux backend.
+#   playwright, opencv-python       browser control + vision, local.
+#
+# The honest consequence: a cloud container can PLAN and reason about desktop
+# work but cannot EXECUTE it. Execution belongs to the Windows agent. That split
+# is the architecture, not a workaround.
+# ---------------------------------------------------------------------------

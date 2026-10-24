@@ -1,0 +1,17 @@
+PLACED: CA6516cf6fe360e4acdf09aaa4f62245ae
+  t+5s ringing dur=0
+  t+10s ringing dur=0
+  t+15s in-progress dur=0
+  t+20s in-progress dur=0
+  t+25s in-progress dur=0
+  t+30s in-progress dur=0
+  t+35s in-progress dur=0
+  t+40s in-progress dur=0
+  t+45s in-progress dur=0
+  t+50s in-progress dur=0
+  t+55s in-progress dur=0
+  t+60s in-progress dur=0
+  t+65s in-progress dur=0
+  t+70s in-progress dur=0
+  t+75s in-progress dur=0
+  t+80s in-progress dur=0

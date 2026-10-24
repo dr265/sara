@@ -1,0 +1,20 @@
+{
+  "llm_provider": "xkiro",
+  "llm_api_key": "",
+  "llm_model": "mistralai/mistral-large-2512",
+  "llm_url": "https://api.xkiro.com/v1",
+  "anymodel_api_key": "",
+  "anymodel_base_url": "https://anymodel.org/v1",
+  "gemini_model": "ag/gemini-2.5-flash",
+  "gemini_api_key": "",
+  "_available_models": {
+    "grok_flagship": "x-ai/grok-4.6",
+    "mistral_large": "mistralai/mistral-large-2512",
+    "kimi_flagship": "moonshotai/kimi-k2.6",
+    "codestral": "mistralai/codestral-2508",
+    "qwen_max_free": "qwen/qwen3.8-max:free",
+    "gemini_flash": "ag/gemini-2.5-flash"
+  },
+  "_note": "Template only - no real keys. Copy to config/api_keys.json (git-ignored) and fill in your keys, or export LLM_API_KEY / ANYMODEL_API_KEY. Providers: xkiro (cloud, default), anymodel (Gemini/Claude backup), openai (local OpenAI-compatible), ollama (offline, no key needed).",
+  "os_system": "windows"
+}

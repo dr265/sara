@@ -1,0 +1,729 @@
+/* ==========================================================================
+   SARA ULTRON — command center surfaces
+   --------------------------------------------------------------------------
+   Visual language taken from the supplied sara_ultron.html hologram: the
+   #010204 void with its radial falloff, the cyan #00f0ff primary with its
+   glow, the amber #ffaa00 secondary, hairline 1px framing and the glass
+   overlay treatment (translucent plate + 12px backdrop blur).
+
+   These are the Ultron-specific surfaces only. Colour, spacing, radius,
+   shadow and typography tokens all come from the shared SARA system in
+   src/styles/sara.css (--sara-*), so this page stays inside the product's
+   design language instead of introducing a second one.
+
+   Restraint is deliberate: two accent hues, no decorative gradients on
+   content, no glass on nested cards. Glass marks the hologram stage and the
+   live console because those are the surfaces that sit over the render; flat
+   panels carry the data.
+   ========================================================================== */
+
+.ultron-viewport {
+  min-height: 100vh;
+  /* The same radial falloff the source page uses, so the hologram sits in the
+     same darkness it was designed against. */
+  background:
+    radial-gradient(1200px 800px at 50% 38%, #050a14 0%, #010204 62%, #000 100%);
+  color: var(--sara-ink);
+  font-family: var(--sara-font-sans);
+  padding: 28px 22px 64px;
+}
+
+.ultron-shell {
+  width: min(1560px, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── masthead ────────────────────────────────────────────────────────────── */
+.ultron-masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.14);
+  padding-bottom: 16px;
+}
+
+.ultron-masthead h1 {
+  margin: 6px 0 6px;
+  font-size: clamp(22px, 2.4vw, 34px);
+  font-weight: 300;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #e8f6ff;
+  text-shadow: 0 0 18px rgba(0, 240, 255, 0.35);
+}
+
+.ultron-masthead h1 strong {
+  font-weight: 600;
+  color: #00f0ff;
+  text-shadow: 0 0 16px rgba(0, 240, 255, 0.55);
+}
+
+.ultron-kicker {
+  font-family: var(--sara-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--sara-dim);
+}
+
+.ultron-tagline {
+  margin: 0;
+  max-width: 660px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--sara-muted);
+}
+
+.ultron-headstats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* A real readout: label over value, monospace, no invented figures. */
+.ultron-stat {
+  min-width: 108px;
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 240, 255, 0.16);
+  background: rgba(3, 9, 18, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.ultron-stat__label {
+  font-family: var(--sara-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: var(--sara-faint);
+  display: block;
+}
+
+.ultron-stat__value {
+  font-family: var(--sara-font-mono);
+  font-size: 14px;
+  color: #d8f4ff;
+  display: block;
+  margin-top: 3px;
+}
+
+/* ── phase strip ─────────────────────────────────────────────────────────── */
+.ultron-phases {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ultron-phase {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border: 1px solid var(--sara-line);
+  font-family: var(--sara-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  transition: color 220ms var(--sara-ease), border-color 220ms var(--sara-ease),
+    background 220ms var(--sara-ease);
+}
+
+.ultron-phase__mark {
+  font-size: 9px;
+}
+
+.ultron-phase--current {
+  animation: ultron-phase-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes ultron-phase-breathe {
+  0%, 100% { box-shadow: inset 0 0 0 rgba(0, 240, 255, 0); }
+  50% { box-shadow: inset 0 0 18px rgba(0, 240, 255, 0.12); }
+}
+
+.ultron-phase--terminal {
+  margin-left: auto;
+  font-weight: 700;
+}
+
+/* ── stage: the hologram + the live console beside it ────────────────────── */
+.ultron-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+@media (max-width: 1080px) {
+  .ultron-stage { grid-template-columns: minmax(0, 1fr); }
+}
+
+.ultron-core {
+  position: relative;
+  min-height: 520px;
+  border: 1px solid rgba(0, 240, 255, 0.16);
+  background: rgba(2, 5, 10, 0.85);
+  overflow: hidden;
+}
+
+.ultron-core__canvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* The supplied page's overlay plate: translucent, blurred, hairline framed. */
+.ultron-core__overlay {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  right: 18px;
+  padding: 16px 18px;
+  background: rgba(5, 12, 25, 0.42);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 240, 255, 0.22);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.ultron-core__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #00f0ff;
+  text-shadow: 0 0 12px rgba(0, 240, 255, 0.8);
+}
+
+.ultron-core__subtitle {
+  margin: 6px 0 0;
+  font-family: var(--sara-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: #ffaa00;
+  text-shadow: 0 0 10px rgba(255, 170, 0, 0.6);
+}
+
+/* The source page's pulsing status bar, now bound to real plan progress. */
+.ultron-core__bar {
+  margin-top: 12px;
+  height: 2px;
+  background: rgba(0, 240, 255, 0.16);
+  position: relative;
+  overflow: hidden;
+}
+
+.ultron-core__bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, #0088ff, #00f0ff);
+  box-shadow: 0 0 10px #00f0ff;
+  transition: width 320ms var(--sara-ease);
+}
+
+.ultron-core__bar--idle > span {
+  animation: ultron-bar-idle 3.2s ease-in-out infinite alternate;
+}
+
+@keyframes ultron-bar-idle {
+  0% { opacity: 0.35; }
+  100% { opacity: 0.8; }
+}
+
+.ultron-core__foot {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 16px;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-family: var(--sara-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--sara-muted);
+}
+
+.ultron-core__hint {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+  transform-origin: right center;
+  font-family: var(--sara-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  color: rgba(0, 240, 255, 0.28);
+  pointer-events: none;
+}
+
+/* ── panels ──────────────────────────────────────────────────────────────── */
+.ultron-panel {
+  border: 1px solid var(--sara-line);
+  background: rgba(7, 11, 18, 0.72);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ultron-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ultron-panel__head h2 {
+  margin: 0;
+  font-family: var(--sara-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  color: #7dd3fc;
+}
+
+.ultron-panel__tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ultron-subhead {
+  margin: 0 0 8px;
+  font-family: var(--sara-font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.24em;
+  color: var(--sara-faint);
+}
+
+.ultron-mono-dim {
+  font-family: var(--sara-font-mono);
+  font-size: 10.5px;
+  color: var(--sara-muted);
+  letter-spacing: 0.06em;
+}
+
+.ultron-footnote {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--sara-dim);
+}
+
+.ultron-warn {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--sara-warn);
+  border-left: 2px solid rgba(251, 191, 36, 0.5);
+  padding-left: 10px;
+}
+
+.ultron-error {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--sara-err);
+  border-left: 2px solid rgba(248, 113, 113, 0.5);
+  padding-left: 10px;
+}
+
+.ultron-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.ultron-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+@media (max-width: 980px) {
+  .ultron-columns { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── controls ────────────────────────────────────────────────────────────── */
+.ultron-btn {
+  font-family: var(--sara-font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  padding: 8px 14px;
+  border: 1px solid rgba(0, 240, 255, 0.32);
+  background: rgba(0, 240, 255, 0.08);
+  color: #cdf3ff;
+  cursor: pointer;
+  transition: background 160ms var(--sara-ease), border-color 160ms var(--sara-ease),
+    color 160ms var(--sara-ease);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ultron-btn:hover:not(:disabled) {
+  background: rgba(0, 240, 255, 0.16);
+  border-color: rgba(0, 240, 255, 0.55);
+}
+
+.ultron-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ultron-btn--primary {
+  background: #00f0ff;
+  color: #00161d;
+  border-color: #00f0ff;
+  font-weight: 700;
+}
+
+.ultron-btn--primary:hover:not(:disabled) {
+  background: #6ff8ff;
+  color: #00161d;
+}
+
+.ultron-btn--ghost {
+  background: transparent;
+  border-color: var(--sara-line-strong);
+  color: var(--sara-ink-2);
+}
+
+.ultron-btn--ghost:hover:not(:disabled) {
+  background: var(--sara-glass);
+  border-color: rgba(0, 240, 255, 0.4);
+}
+
+.ultron-btn--danger {
+  background: rgba(255, 84, 112, 0.1);
+  border-color: rgba(255, 84, 112, 0.4);
+  color: #ffb3c0;
+}
+
+.ultron-btn--danger:hover:not(:disabled) {
+  background: rgba(255, 84, 112, 0.2);
+}
+
+.ultron-input,
+.ultron-textarea {
+  font-family: var(--sara-font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  color: var(--sara-ink);
+  background: rgba(2, 5, 11, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.16);
+  outline: none;
+  transition: border-color 160ms var(--sara-ease);
+}
+
+.ultron-input:focus,
+.ultron-textarea:focus {
+  border-color: rgba(0, 240, 255, 0.5);
+}
+
+.ultron-textarea {
+  resize: vertical;
+  min-height: 92px;
+}
+
+.ultron-inline {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ultron-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ultron-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--sara-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--sara-muted);
+  cursor: pointer;
+}
+
+/* ── fleet ───────────────────────────────────────────────────────────────── */
+.ultron-fleet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 1px;
+  background: var(--sara-line-soft);
+}
+
+.ultron-fleet__row {
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+  padding: 11px 12px;
+  background: rgba(7, 11, 18, 0.9);
+}
+
+.ultron-fleet__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex: none;
+}
+
+.ultron-fleet__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.ultron-fleet__title {
+  display: flex;
+  gap: 9px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+}
+
+.ultron-fleet__status {
+  font-family: var(--sara-font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  margin-left: auto;
+}
+
+.ultron-fleet__meta {
+  margin-top: 3px;
+  word-break: break-word;
+}
+
+.ultron-fleet__detail {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--sara-dim);
+  word-break: break-word;
+}
+
+.ultron-fleet__actions {
+  flex: none;
+}
+
+/* ── plan, steps, trace ──────────────────────────────────────────────────── */
+.ultron-plan {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ultron-plan__step {
+  display: flex;
+  gap: 12px;
+  font-size: 12.5px;
+}
+
+.ultron-plan__index {
+  font-family: var(--sara-font-mono);
+  font-size: 11px;
+  flex: none;
+  padding-top: 1px;
+}
+
+.ultron-plan__args {
+  margin-left: 8px;
+  word-break: break-word;
+}
+
+.ultron-plan__rationale {
+  font-size: 11px;
+  color: var(--sara-dim);
+  margin-top: 2px;
+}
+
+.ultron-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.ultron-step {
+  border-left: 2px solid var(--sara-line-strong);
+  padding-left: 10px;
+}
+
+.ultron-step__head {
+  display: flex;
+  gap: 9px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+}
+
+.ultron-step__out {
+  margin: 5px 0 0;
+  font-family: var(--sara-font-mono);
+  font-size: 10.5px;
+  line-height: 1.65;
+  color: var(--sara-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 190px;
+  overflow: auto;
+}
+
+.ultron-trace {
+  flex: 1;
+  min-height: 240px;
+  max-height: 460px;
+  overflow-y: auto;
+  font-family: var(--sara-font-mono);
+  font-size: 11px;
+  line-height: 1.75;
+  padding-right: 4px;
+}
+
+.ultron-trace__line {
+  color: var(--sara-muted);
+  word-break: break-word;
+}
+
+.ultron-trace__line--ultron {
+  color: #7dd3fc;
+}
+
+.ultron-report {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(0, 240, 255, 0.18);
+  background: rgba(2, 5, 11, 0.9);
+  font-size: 12.5px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  color: var(--sara-ink-2);
+}
+
+/* ── approval gate ───────────────────────────────────────────────────────── */
+.ultron-gate {
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  background: rgba(251, 191, 36, 0.07);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ultron-gate__prompt {
+  font-family: var(--sara-font-mono);
+  font-size: 11.5px;
+  color: var(--sara-warn);
+  word-break: break-word;
+}
+
+/* ── memory ──────────────────────────────────────────────────────────────── */
+.ultron-memory {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 22px;
+}
+
+@media (max-width: 900px) {
+  .ultron-memory { grid-template-columns: minmax(0, 1fr); }
+}
+
+.ultron-rules,
+.ultron-runs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.ultron-rule,
+.ultron-run {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 9px;
+  border: 1px solid var(--sara-line-soft);
+  font-size: 12px;
+}
+
+/* A rule row carries two controls (enable/disable + delete); a run row carries
+   one (forget) plus its step count. */
+.ultron-rule {
+  grid-template-columns: 62px minmax(0, 1fr) auto auto auto;
+}
+
+.ultron-rule__state {
+  font-family: var(--sara-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+}
+
+.ultron-rule__body,
+.ultron-run__goal {
+  word-break: break-word;
+}
+
+.ultron-run__error {
+  grid-column: 2 / -1;
+  font-family: var(--sara-font-mono);
+  font-size: 10.5px;
+  color: var(--sara-warn);
+  word-break: break-word;
+}
+
+.ultron-suggestions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ultron-suggestion {
+  font-family: var(--sara-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  padding: 5px 11px;
+  border: 1px solid var(--sara-line);
+  background: transparent;
+  color: var(--sara-muted);
+  cursor: pointer;
+  transition: color 160ms var(--sara-ease), border-color 160ms var(--sara-ease);
+}
+
+.ultron-suggestion:hover:not(:disabled) {
+  color: #cdf3ff;
+  border-color: rgba(0, 240, 255, 0.4);
+}
+
+.ultron-suggestion:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

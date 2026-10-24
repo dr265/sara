@@ -1,0 +1,144 @@
+﻿# Secrets — never commit
+.env
+.env.local
+.env.*.local
+backend/.env
+backend/.env.render
+frontend/.env.local
+frontend/.env.vercel
+# Holds the REAL Clerk keys + API keys, copied from .env.local for the Docker
+# build. Must never be committed — .env.docker.example is the tracked template.
+frontend/.env.docker
+# Holds the REAL LLM provider keys (xkiro / anymodel / gemini). Fill in your own
+# copy locally — this file is never tracked. api_keys.example.json is the template.
+sara_desktop/config/api_keys.json
+backend/.sara_master_key
+backend/gmail_token.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+/sara_desktop/config/certs/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Node
+node_modules/
+.next/
+.turbo/
+
+# Local agent tooling state (this machine's editor agent)
+.freebuff/
+
+# Runtime
+logs/
+*.log
+ngrok*
+sara_storage/
+scratch/
+playwright-report/
+test-results/
+
+# SQLite databases — LIVE USER DATA, never commit
+# These hold real rows: users, conversations, messages, leads, bookings,
+# WhatsApp channels (with encrypted credentials), voice call transcripts and
+# email campaign history. Committing them to a hosted repository publishes
+# user data and conversation history. The schema is recreated automatically by
+# models.Base.metadata.create_all() on first boot, so nothing is lost by
+# excluding them.
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+backend/data/
+backend/email_uploads/
+backend/generated_music/
+backend/gameforge_projects/
+
+# Screenshots / audio captured during development
+*.png
+backend/*.wav
+
+# Downloaded binaries and build/runtime artefacts
+# cloudflared.exe is a 53 MB vendor binary the README tells you to download;
+# committing it doubles the clone size for no benefit.
+tools/*.exe
+tools/*.msi
+tools/*.dmg
+tools/*.zip
+
+# Generated TTS cache (797 files) — regenerated on demand
+backend/app/static/voice/
+
+# Static export output — produced by `next build`, never a source artefact
+frontend/out/
+frontend/.vercel/
+frontend/tsconfig.tsbuildinfo
+
+# Browser-automation scratch — transient YAML snapshots of pages that were
+# visited during a debugging session. 89 of these had been committed; they
+# change on every page load and are worthless as history.
+.playwright-mcp/
+backend/.playwright-mcp/
+
+# Runtime logs. Uvicorn and the pollers write here; none of it belongs in git.
+*.log
+logs/
+
+# Paired-device state and the desktop agent's cached device token.
+# The backend keeps only a SHA-256 hash of each token and the agent keeps the
+# token itself in clear - neither file is ever source. Committing them would
+# turn a routine `git add -A` into a credential leak.
+device_token
+devices.json
+.sara/
+backend/_uitok/
+backend/_autotok/
+backend/_dockertok/
+backend/_finaltok/
+backend/_e2estate/
+
+# Per-bot browser profiles for Sara Bots. Each is a real Chromium user-data
+# dir holding the owner's live login cookies - machine-local runtime state,
+# never source.
+backend/.sara_bot_profiles/
+
+# Sara Bots runtime stores: bot configs, task goals + step outputs, scheduled
+# ticks and each bot's private memory. Live user data written by the worker
+# at runtime - the schema is recreated on first boot, so nothing is lost by
+# excluding them.
+backend/app/data/sara_bots_*.json
+backend/app/data/sara_bots_memory/
+
+# Agency agents runtime: per-agent chat history (live user conversations).
+backend/agency_history.json
+
+# Local agent state, device pairing responses, and generated user content.
+/dev.json
+/pair.json
+/backend/agent_runtime.json
+/backend/agent_social_pilot.json
+/backend/agent_social_settings.json
+/backend/agent_whatsapp_cursor.json
+/backend/ashna_probe_results.json
+/backend/sara_bot_attachments/
+/backend/app/data/scraper_history.jsonl
+/sara_desktop/memory/*.json
+
+# Development output and transient test logs.
+/backend/backend_err.txt
+/backend/backend_log.txt
+/backend/.pytest_muse*.txt
+/frontend/.tsc_out.txt
+/sara_desktop/*.txt
+!/sara_desktop/requirements.txt
+
+.pytest_tmp/

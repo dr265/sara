@@ -1,0 +1,76 @@
+# Keep secrets and junk out of the Docker build context.
+#
+# The most important line here is backend/.env. It holds every API key and
+# token in the project. Without this exclusion, `docker build` would COPY it
+# into an image layer — and it would then be readable by anyone who pulls the
+# image, even after a later layer deletes it. Compose passes secrets at RUNTIME
+# via env_file, which is the only correct way.
+
+# --- Secrets: never bake these into an image ------------------------------
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env.local
+frontend/.env.vercel
+frontend/.env.production
+frontend/.env.docker
+*.pem
+*.key
+
+# --- Version control / CI ---------------------------------------------------
+.git
+.gitignore
+.github
+
+# --- Python -----------------------------------------------------------------
+backend/venv/
+backend/.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+backend/_venv_freeze.txt
+
+# --- Node -------------------------------------------------------------------
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+npm-debug.log*
+yarn-error.log*
+
+# --- Runtime state: databases, logs, uploads, captures ---------------------
+# These are data, not source. Shipping them would bake one machine's state
+# into the image and could leak user documents.
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+backend/data/
+backend/logs/
+backend/email_uploads/
+backend/sara_storage/
+sara_storage/
+logs/
+sara_desktop/memory/
+sara_desktop/config/
+backend/*.log
+backend/*.log.*
+*.png
+*.jpg
+*.jpeg
+*.mp3
+*.wav
+*.zip
+
+# --- Local agent scratch ----------------------------------------------------
+scratch/
+ngrok_run.log
+browser_screenshot_*.png
+
+# --- Docs (not needed at runtime) -------------------------------------------
+*.md
+!backend/**/*.md

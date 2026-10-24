@@ -1,0 +1,139 @@
+                    {/* Header & Tabs */}
+                    <div className="p-0 border-b border-white/10 shrink-0">
+                       <div className="p-6 pb-4">
+                         <h2 className="text-2xl font-semibold mb-2">{active.name}</h2>
+                         <div className="flex items-center gap-2 text-xs text-white/50">
+                            <span className="uppercase tracking-widest text-white/30">{active.provider}</span>
+                            <span>•</span>
+                            <span>{total} targets queued</span>
+                            {active.dry_run && <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 ml-2">DRY RUN</span>}
+                         </div>
+                       </div>
+                       
+                       <div className="flex px-6 gap-6 text-[11px] font-mono tracking-widest uppercase">
+                          <button 
+                             onClick={() => setActiveTab('setup')} 
+                             className={`pb-3 border-b-2 transition-colors ${activeTab === 'setup' ? 'border-[#A4F4FD] text-white' : 'border-transparent text-white/40 hover:text-white/70'}`}
+                          >
+                             Campaign Setup
+                          </button>
+                          <button 
+                             onClick={() => setActiveTab('ingestion')} 
+                             className={`pb-3 border-b-2 transition-colors ${activeTab === 'ingestion' ? 'border-[#A4F4FD] text-white' : 'border-transparent text-white/40 hover:text-white/70'}`}
+                          >
+                             Ingestion & Controls
+                          </button>
+                       </div>
+                    </div>
+
+                    {/* Scrollable Body */}
+                    <div className="flex-1 overflow-y-auto p-6">
+                       
+                       {activeTab === 'setup' && (
+                         <div className="space-y-6">
+                           {/* Section: Memory */}
+                           <div className="liquid-glass rounded-xl p-5 border border-white/5">
+                              <div className="flex items-center gap-2 mb-4">
+                                 <span className="text-[#A4F4FD]">✦</span>
+                                 <h3 className="text-sm font-semibold">Campaign Memory</h3>
+                              </div>
+                              <div className="space-y-4">
+                                <Field label="Instructions (Agent Prompt)">
+                                  <textarea
+                                    value={instructionsDraft}
+                                    onChange={e => setInstructionsDraft(e.target.value)}
+                                    className={inputCls}
+                                    rows={3}
+                                    placeholder="e.g. Keep it under 150 words..."
+                                  />
+                                </Field>
+                                <Field label="Context (Background Info)">
+                                  <textarea
+                                    value={contextDraft}
+                                    onChange={e => setContextDraft(e.target.value)}
+                                    className={inputCls}
+                                    rows={4}
+                                    placeholder="Paste product details here..."
+                                  />
+                                </Field>
+                                
+                                {/* CONTEXT PDF UPLOAD RESTORED */}
+                                <div className="pt-2">
+                                   <label className="block border-2 border-dashed border-white/10 rounded-xl p-4 text-center cursor-pointer hover:border-white/30 hover:bg-white/5 transition-all">
+                                      <input type="file" className="hidden" onChange={e => e.target.files && uploadContextFile(e.target.files[0])} accept=".txt,.md,.pdf" />
+                                      <div className="text-xs font-medium text-white/60">+ ATTACH MEMORY FILE (.txt / .md / .pdf)</div>
+                                   </label>
+                                   {contextFiles.length > 0 && (
+                                     <div className="mt-3 space-y-2">
+                                       {contextFiles.map(cf => (
+                                         <div key={cf.id} className="flex justify-between items-center text-xs bg-black/40 px-3 py-1.5 rounded border border-white/10">
+                                            <span className="truncate max-w-[200px] text-white/80">{cf.filename}</span>
+                                            <span className="text-white/40">{cf.chars} chars</span>
+                                         </div>
+                                       ))}
+                                     </div>
+                                   )}
+                                </div>
+                                
+                                <div className="flex justify-end pt-2">
+                                   <button onClick={saveMemory} className="text-xs font-medium bg-white text-black px-4 py-2 rounded-lg hover:bg-white/90">
+                                     Save Memory
+                                   </button>
+                                </div>
+                              </div>
+                           </div>
+                         </div>
+                       )}
+
+                       {activeTab === 'ingestion' && (
+                         <div className="space-y-8">
+                           {/* Section: Ingestion */}
+                           <div className="liquid-glass rounded-xl p-5 border border-white/5">
+                              <h3 className="text-sm font-semibold mb-4">Client Ingestion (Add Targets)</h3>
+                              <div className="space-y-4">
+                                <label className="block border-2 border-dashed border-white/10 rounded-xl p-6 text-center cursor-pointer hover:border-white/30 hover:bg-white/5 transition-all">
+                                  <input type="file" multiple className="hidden" onChange={e => e.target.files && uploadClientsFile(e.target.files[0])} accept=".csv,.pdf" />
+                                  <div className="text-sm font-medium">Drop or click to upload CSV/PDF</div>
+                                  <div className="text-xs text-white/40 mt-1">Extracts clients automatically into queue</div>
+                                </label>
+                                
+                                <div className="flex gap-2">
+                                   <div className="flex-1">
+                                     <input type="text" placeholder="Google Sheet ID" value={sheetId} onChange={e => setSheetId(e.target.value)} className={inputCls} />
+                                   </div>
+                                   <div className="w-24">
+                                     <input type="text" placeholder="Range" value={sheetRange} onChange={e => setSheetRange(e.target.value)} className={inputCls} />
+                                   </div>
+                                   <button onClick={connectSheet} className="px-4 py-2 rounded-xl bg-white/10 text-white text-xs font-medium hover:bg-white/20">
+                                     Pull
+                                   </button>
+                                </div>
+                              </div>
+                           </div>
+
+                           {/* Section: Run Control / Test */}
+                           <div className="liquid-glass rounded-xl p-5 border border-white/5">
+                              <h3 className="text-sm font-semibold mb-4 text-[#A4F4FD]">Test Send</h3>
+                              <div className="space-y-4">
+                                <Field label="Send one generated email">
+                                  <div className="flex gap-2">
+                                    <input
+                                      type="email"
+                                      value={testEmail}
+                                      onChange={e => setTestEmail(e.target.value)}
+                                      placeholder="test@inbox.com"
+                                      className={inputCls}
+                                    />
+                                    <button
+                                      onClick={doTestSend}
+                                      disabled={!!busy || !testEmail}
+                                      className="px-4 shrink-0 rounded-xl bg-white/10 text-[11px] font-bold text-white hover:bg-white/20 transition-colors border border-white/20 disabled:opacity-50 uppercase tracking-wider"
+                                    >
+                                      SEND
+                                    </button>
+                                  </div>
+                                </Field>
+                              </div>
+                           </div>
+                         </div>
+                       )}

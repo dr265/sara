@@ -1,0 +1,167 @@
+# SARA AI Platform — production Docker stack.
+#
+#   docker compose --env-file frontend/.env.docker up -d --build    start all
+#   docker compose logs -f backend                                 watch the API
+#   docker compose down                                            stop
+#
+# WHY --env-file MATTERS: Next.js inlines every NEXT_PUBLIC_* into the client
+# bundle at BUILD time, including the Clerk keys. Without this file the image
+# builds "successfully" and then every page 500s with
+# "@clerk/nextjs: Missing publishableKey". That is the single most common way
+# this stack comes up broken.
+#
+# WHAT IS AND IS NOT IN HERE
+#
+#   backend   the whole cloud half: API, WebSockets, agent orchestration,
+#             LLM failover, documents, database. Python 3.13.
+#   frontend  Next.js, served as static + SSR on :3000.
+#   db        Postgres 16. OPTIONAL — omit with `--profile localdb` when
+#             DATABASE_URL points at Neon (or any hosted Postgres), which is
+#             what production should do. A container-local Postgres is for
+#             development and for a single-machine install.
+#
+# WHAT IS DELIBERATELY NOT IN HERE: any desktop-control component. A Linux
+# container cannot reach the user's mouse, keyboard, screen or microphone.
+# sara_desktop/ runs on the Windows PC and talks to `backend` over
+# /ws and /ultron/*. Pretending otherwise is what broke the last deployment.
+#
+# SECRETS: nothing is hard-coded here. Every credential comes from
+# backend/.env (git-ignored). Copy backend/.env.example -> backend/.env once.
+#
+# STATE: the `sara_state` volume holds the paired-device registry. It is the one
+# piece of state that must outlive a container rebuild; without it every deploy
+# unpairs every device. `docker compose down -v` deletes it deliberately.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: sara-backend:latest
+    container_name: sara-backend
+    restart: unless-stopped
+    # env_file supplies every secret; no value is ever written into this file.
+    env_file:
+      - ./backend/.env
+    environment:
+      # The container's own network name. Used by the frontend's server-side
+      # proxy (app/api/chat, app/api/orchestrate) which runs inside the
+      # compose network and therefore CAN use this name — unlike a browser,
+      # which cannot resolve it.
+      SARA_INTERNAL_BACKEND_URL: "http://backend:8000"
+      # /app/sara_desktop is required as well as /app. The action modules do a
+      # BARE `from core import confirm`, which only resolves if sara_desktop
+      # itself is on the path - exactly as the Windows agent arranges at
+      # runtime. Without it every Ultron task thread died with
+      # "No module named 'core'" the moment it built the tool registry.
+      # Safe alongside /app: the backend only ever imports its own core as
+      # app.agents.sara_ultron_agent.core, never as a top-level `core`.
+      PYTHONPATH: "/app:/app/sara_desktop"
+      # Where core/devices.py persists the paired-device registry. It MUST be
+      # on a volume: without one, every `up --build`, `--force-recreate` or
+      # `down` throws the container filesystem away and silently unpairs every
+      # phone and desktop - which is exactly the "it keeps asking me to connect
+      # the desktop" behaviour this state directory exists to end.
+      SARA_STATE_DIR: "/var/lib/sara"
+    ports:
+      # Published on 8080, NOT 8000.
+      #
+      # 8000 is reserved for the LOCAL WINDOWS BACKEND, because that is the
+      # process which actually executes desktop actions: app/api/sara_auto_agent.py
+      # inserts sara_desktop onto sys.path and app/api/desktop_agent.py imports
+      # full_ai_v3 IN-PROCESS. Tools therefore run inside whichever backend
+      # serves the request - and a Linux container has no pyautogui, no screen
+      # buffer and no Win32. Publishing the cloud container on 8000 would put
+      # the two in direct conflict and guarantee that desktop control breaks.
+      #
+      # The cloud half is the half that CANNOT touch the desktop. Give it its
+      # own port and stop pretending they are the same service.
+      #
+      # Bound to loopback on purpose: the API is reached through the frontend
+      # or a reverse proxy, and exposing it on the LAN hands an authenticated
+      # agent API to every device on the network.
+      - "127.0.0.1:8080:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    volumes:
+      # Paired devices (tokens hashed, never in the clear). Survives rebuilds,
+      # recreates and `down`. Back this up if the machines matter.
+      - sara_state:/var/lib/sara
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      # Next.js inlines NEXT_PUBLIC_* at BUILD time, so these must be passed as
+      # build args. Putting them only under `environment:` below would change
+      # nothing for the browser - the compiled bundle would keep the old URL.
+      # Values come from frontend/.env.docker via the `--env-file` flag.
+      args:
+        NEXT_PUBLIC_BACKEND_URL: "${NEXT_PUBLIC_BACKEND_URL:-http://127.0.0.1:8080}"
+        # Desktop control -> the LOCAL WINDOWS backend on 8000, never the cloud.
+        NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://127.0.0.1:8000}"
+        NEXT_PUBLIC_ULTRON_API_URL: "${NEXT_PUBLIC_ULTRON_API_URL:-http://127.0.0.1:8000}"
+        NEXT_PUBLIC_DESKTOP_API_URL: "${NEXT_PUBLIC_DESKTOP_API_URL:-http://127.0.0.1:8000}"
+        NEXT_PUBLIC_DESKTOP_WS_URL: "${NEXT_PUBLIC_DESKTOP_WS_URL:-ws://127.0.0.1:8000/ws}"
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}"
+        NEXT_PUBLIC_CLERK_SIGN_IN_URL: "${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}"
+        NEXT_PUBLIC_CLERK_SIGN_UP_URL: "${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}"
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: "${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}"
+        NEXT_PUBLIC_SARA_API_KEY: "${NEXT_PUBLIC_SARA_API_KEY:-}"
+        NEXT_PUBLIC_DESKTOP_API_TOKEN: "${NEXT_PUBLIC_DESKTOP_API_TOKEN:-}"
+    image: sara-frontend:latest
+    container_name: sara-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      # NEXT_PUBLIC_* are inlined at BUILD time by Next.js, so these values
+      # must also be passed as build args (see frontend/.env.docker) for the
+      # browser bundle to be correct. Changing one requires a REBUILD, not
+      # just a restart.
+      #
+      # Backend URL as the VISITOR sees it: the CLOUD container, port 8080.
+      NEXT_PUBLIC_BACKEND_URL: "${NEXT_PUBLIC_BACKEND_URL:-http://127.0.0.1:8080}"
+      # Server-side only — never inlined into the browser bundle.
+      SARA_LEGACY_BACKEND_URL: "http://backend:8000"
+      SARA_INTERNAL_BACKEND_URL: "http://backend:8000"
+      CLERK_SECRET_KEY: "${CLERK_SECRET_KEY:-}"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # Optional local Postgres. Enable with:  docker compose --profile localdb up -d
+  db:
+    profiles: ["localdb"]
+    image: postgres:16-alpine
+    container_name: sara-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sara}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sara}
+      POSTGRES_DB: ${POSTGRES_DB:-sara_db}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - sara_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sara} -d ${POSTGRES_DB:-sara_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  sara_db_data:
+  # Paired-device registry. Losing this unpairs every phone and desktop.
+  sara_state:

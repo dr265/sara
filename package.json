@@ -1,0 +1,7 @@
+{
+  "name": "sara-ai-platform",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix frontend run dev --"
+  }
+}

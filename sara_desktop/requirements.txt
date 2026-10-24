@@ -1,0 +1,77 @@
+# sara_desktop - standalone PyQt6 voice assistant
+# Install:  pip install -r requirements.txt
+# Keep this in sync with the actual imports in sara_desktop/**/*.py — the
+# October 2026 breakage ("PyAutoGUI installed but Jarvis can't type") was
+# exactly a mismatch between this file and the code.
+#
+# Notes:
+#   * google-genai backs the Gemini Live session (core/llm_client.py, main.py).
+#   * playwright is a lazy import (browser automation); install browsers after:
+#       python -m playwright install chromium
+#   * torch / kokoro / vosk / faster-whisper are OPTIONAL fallback STT/TTS
+#     engines with lazy imports — install them only if you switch engines.
+
+# ── UI & audio core ─────────────────────────────────────────────────────────
+PyQt6>=6.5
+sounddevice>=0.4.6
+numpy>=1.24
+openwakeword>=0.6          # local wake word ("Hey Sara")
+
+# ── Live AI session ─────────────────────────────────────────────────────────
+google-genai>=1.0
+requests>=2.31
+
+# ── Desktop control & vision (PyAutoGUI + MSS are REQUIRED for Jarvis to
+#    type/click and to see the screen) ──────────────────────────────────────
+pyautogui>=0.9.54
+mss>=9.0
+opencv-python>=4.8
+pyperclip>=1.8
+pygetwindow>=0.0.9
+pillow>=10.0
+pywinauto>=0.6.8
+uiautomation>=2.0
+
+# ── Windows platform helpers ────────────────────────────────────────────────
+psutil>=5.9
+comtypes>=1.2; sys_platform == "win32"
+pycaw>=20220416; sys_platform == "win32"
+pywin32>=306; sys_platform == "win32"
+wmi>=1.5; sys_platform == "win32"
+pynvml>=11.0
+screen-brightness-control>=0.22
+
+# ── Search / web ────────────────────────────────────────────────────────────
+beautifulsoup4>=4.12
+ddgs>=9.0
+duckduckgo_search>=6.0     # legacy import path kept as fallback
+youtube-transcript-api>=1.0
+
+# ── Documents & data ────────────────────────────────────────────────────────
+python-pptx>=0.6.21
+python-docx>=1.1
+openpyxl>=3.1
+reportlab>=4.0
+PyPDF2>=3.0
+pdfplumber>=0.10
+pandas>=2.0
+xlsxwriter>=3.1
+send2trash>=1.8
+
+# ── Media ───────────────────────────────────────────────────────────────────
+soundfile>=0.12
+miniaudio>=1.0
+edge-tts>=6.1
+pydub>=0.25
+qrcode[pil]>=7.4
+plyer>=2.1
+
+# ── Dashboard (remote control from the phone) ───────────────────────────────
+fastapi>=0.110
+uvicorn[standard]>=0.29
+cryptography>=42.0
+websocket-client>=1.7
+python-multipart>=0.0.9     # phone file uploads (/api/upload)
+
+# ── Optional: browser automation ────────────────────────────────────────────
+playwright>=1.40
